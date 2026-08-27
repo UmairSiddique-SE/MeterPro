@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "137015114539",
+    "project_id": "metrowatt-2614f",
+    "storage_bucket": "metrowatt-2614f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137015114539:android:0a2a3932f4e564fa98236e",
+        "android_client_info": {
+          "package_name": "com.example.meterunit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6Wn_bV107I4tbh1Q0jI5mLk0qrJLPYiM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

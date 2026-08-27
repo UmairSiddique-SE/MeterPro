@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "meters",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "referenceNo", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "meters",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "meterNo", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

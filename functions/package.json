@@ -1,0 +1,11 @@
+{
+  "name": "meterunit-functions",
+  "private": true,
+  "main": "src/index.js",
+  "engines": { "node": "20" },
+  "scripts": { "lint": "eslint .", "deploy": "firebase deploy --only functions" },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.0.1"
+  }
+}
