@@ -323,14 +323,19 @@ class MeterModel {
     if (readingHistory.isEmpty) return 0;
 
     // Sort ascending for easier comparison
-    final sorted = [...readingHistory]..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final sorted = [...readingHistory]
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     // Find the last reading before or at the start of the period
-    final beforeLogs = sorted.where((l) => !l.timestamp.isAfter(start)).toList();
-    final startReading = beforeLogs.isEmpty ? previousReadingKwh : beforeLogs.last.readingKwh;
+    final beforeLogs =
+        sorted.where((l) => !l.timestamp.isAfter(start)).toList();
+    final startReading =
+        beforeLogs.isEmpty ? previousReadingKwh : beforeLogs.last.readingKwh;
 
     // Find the last reading within the period
-    final withinLogs = sorted.where((l) => !l.timestamp.isBefore(start) && !l.timestamp.isAfter(end)).toList();
+    final withinLogs = sorted
+        .where((l) => !l.timestamp.isBefore(start) && !l.timestamp.isAfter(end))
+        .toList();
     if (withinLogs.isEmpty) return 0;
 
     return (withinLogs.last.readingKwh - startReading).clamp(0, 999999);

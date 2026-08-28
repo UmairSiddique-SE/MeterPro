@@ -257,13 +257,13 @@ class _UsageScreenState extends State<UsageScreen>
               const SizedBox(width: 8),
               Expanded(
                   child: _MetricChip(
-                      label: isWeekly ? 'WEEKLY UNITS' : 'DAILY UNITS',
+                      label: isWeekly ? 'WEEKLY UNITS' : 'TODAY UNITS',
                       value: '${periodUnits.toInt()} kWh',
                       accent: AppColors.accentGreen)),
               const SizedBox(width: 8),
               Expanded(
                   child: _MetricChip(
-                      label: 'DAILY AVERAGE',
+                      label: 'DAILY AVG',
                       value: '${dailyAverage.toStringAsFixed(1)} kWh',
                       accent: AppColors.accentOrange)),
             ],
@@ -558,7 +558,7 @@ class _TabSelector extends StatelessWidget {
   final ValueChanged<int> onChanged;
   const _TabSelector({required this.value, required this.onChanged});
 
-  static const _labels = ['Daily', 'Weekly'];
+  static const _labels = ['Today', 'Weekly'];
   static const _icons = [
     Icons.calendar_view_day_rounded,
     Icons.calendar_view_week_rounded,

@@ -251,14 +251,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showNotificationSettings() {
     bool billReminders = true;
     bool highUsage = true;
-    bool weeklyReport = false;
+    String frequency = 'Daily';
+    TimeOfDay reminderTime = const TimeOfDay(hour: 9, minute: 0);
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setMState) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
           decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
@@ -269,38 +276,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Text('Usage Notifications',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
-              const Text('Get alerted about your meter activities.',
+              const Text('Set reminders to check your meter readings.',
                   style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+
+              const Text('REMINDER SETTINGS',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1)),
+              const SizedBox(height: 12),
+
+              // Frequency Selector
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: ['Daily', 'Weekly'].map((f) {
+                    final selected = frequency == f;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setMState(() => frequency = f),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.primary : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            f,
+                            style: TextStyle(
+                              color: selected ? Colors.white : AppColors.textSecondary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Time Picker Tile
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                tileColor: AppColors.background,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                leading: const Icon(Icons.access_time_rounded, color: AppColors.primary),
+                title: const Text('Reminder Time', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                trailing: Text(
+                  reminderTime.format(ctx),
+                  style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 16),
+                ),
+                onTap: () async {
+                  final picked = await showTimePicker(context: ctx, initialTime: reminderTime);
+                  if (picked != null) setMState(() => reminderTime = picked);
+                },
+              ),
+              const SizedBox(height: 24),
+
+              const Text('SYSTEM ALERTS',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1)),
+              const SizedBox(height: 8),
               SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: const Text('Bill Reminders',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                subtitle: const Text(
-                    'Get notified when your bill is estimated.',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: const Text('Get notified when your bill is estimated.',
                     style: TextStyle(fontSize: 11)),
                 value: billReminders,
                 onChanged: (v) => setMState(() => billReminders = v),
               ),
               SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: const Text('High Usage Alert',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 subtitle: const Text('Notify if daily units exceed 20 kWh.',
                     style: TextStyle(fontSize: 11)),
                 value: highUsage,
                 onChanged: (v) => setMState(() => highUsage = v),
               ),
-              SwitchListTile(
-                title: const Text('Weekly Summaries',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                subtitle: const Text('A weekly report of your energy habits.',
-                    style: TextStyle(fontSize: 11)),
-                value: weeklyReport,
-                onChanged: (v) => setMState(() => weeklyReport = v),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Reminders set for $frequency at ${reminderTime.format(context)}. Message: "Check reading"')),
+                    );
+                  },
+                  child: const Text('Save Notification Settings'),
+                ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),

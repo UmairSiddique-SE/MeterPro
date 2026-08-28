@@ -1,25 +1,434 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MeterPro | Download</title>
-  <style>
-    :root { color-scheme: light; font-family: system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f7fb; color: #15234b; }
-    main { width: min(92vw, 520px); padding: 42px 28px; text-align: center; background: white; border: 1px solid #dce3ef; border-radius: 20px; box-shadow: 0 18px 45px #15234b18; }
-    h1 { margin: 0 0 10px; font-size: 34px; }
-    p { color: #65708b; line-height: 1.6; }
-    a { display: inline-block; margin-top: 18px; padding: 14px 24px; border-radius: 12px; background: #173782; color: white; font-weight: 700; text-decoration: none; }
-    small { display: block; margin-top: 22px; color: #8b95aa; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeterPro — Scan any meter in seconds</title>
+<meta name="description" content="MeterPro turns your phone camera into an instant meter reader. Point, scan, and every reading syncs to the cloud automatically.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14161a;
+    --bg-panel: #1c1f25;
+    --bg-panel-2: #21252c;
+    --line: #2b2f37;
+    --text: #ece8df;
+    --text-dim: #9a9fa8;
+    --amber: #ffb020;
+    --amber-dim: #7a5a1e;
+    --copper: #c17a42;
+    --sync: #4fd88a;
+    --radius: 10px;
+    --wrap: 1120px;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  img,svg{ display:block; max-width:100%; }
+  a{ color: inherit; text-decoration:none; }
+  .wrap{ max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+
+  .display{ font-family: 'Big Shoulders Display', sans-serif; text-transform: uppercase; letter-spacing: 0.01em; }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  /* ---------- background texture ---------- */
+  body{
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(255,176,32,0.05), transparent 40%),
+      radial-gradient(circle at 90% 25%, rgba(193,122,66,0.06), transparent 45%);
+  }
+
+  /* ---------- nav ---------- */
+  header.nav{
+    position: sticky; top:0; z-index: 50;
+    background: rgba(20,22,26,0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner{
+    display:flex; align-items:center; justify-content: space-between;
+    padding: 16px 0;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{ width:30px; height:30px; }
+  .brand-name{ font-family:'Big Shoulders Display'; font-weight:800; font-size:21px; letter-spacing:0.02em; }
+  .brand-name span{ color: var(--amber); }
+  nav.links{ display:flex; gap: 32px; align-items:center; }
+  nav.links a{ font-size:14px; color: var(--text-dim); transition: color .15s; }
+  nav.links a:hover{ color: var(--text); }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 11px 20px;
+    border-radius: 7px;
+    font-size: 14px; font-weight:600;
+    border: 1px solid transparent;
+    cursor:pointer;
+  }
+  .btn-primary{ background: var(--amber); color: #16130a; }
+  .btn-primary:hover{ background:#ffc04d; }
+  .btn-ghost{ border-color: var(--line); color: var(--text); }
+  .btn-ghost:hover{ border-color: var(--copper); }
+  .btn:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  /* ---------- hero ---------- */
+  .hero{ padding: 88px 0 96px; }
+  .hero-grid{
+    display:grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items:center;
+  }
+  .hero h1{
+    font-family:'Big Shoulders Display'; font-weight:900;
+    font-size: clamp(42px, 5.4vw, 66px);
+    line-height: 0.98; letter-spacing: 0.005em;
+    margin: 14px 0 20px;
+  }
+  .hero h1 em{ font-style:normal; color: var(--amber); }
+  .hero p.lede{
+    font-size: 17px; color: var(--text-dim); max-width: 460px; margin-bottom: 30px;
+  }
+  .hero-ctas{ display:flex; gap: 14px; flex-wrap:wrap; margin-bottom: 22px; }
+  .hero-meta{ font-size: 13px; color: var(--text-dim); }
+  .hero-meta .mono{ color: var(--text); }
+
+  /* ---------- scan panel (signature element) ---------- */
+  .scan-panel{
+    position: relative;
+    background: linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 30px 60px -25px rgba(0,0,0,0.6);
+  }
+  .scan-frame{
+    position: relative;
+    aspect-ratio: 4/3.2;
+    border-radius: 12px;
+    background: repeating-linear-gradient(135deg, #191c21, #191c21 2px, #1b1e24 2px, #1b1e24 16px);
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .corner{ position:absolute; width:26px; height:26px; border: 3px solid var(--amber); opacity:0.9; }
+  .corner.tl{ top:14px; left:14px; border-right:none; border-bottom:none; }
+  .corner.tr{ top:14px; right:14px; border-left:none; border-bottom:none; }
+  .corner.bl{ bottom:14px; left:14px; border-right:none; border-top:none; }
+  .corner.br{ bottom:14px; right:14px; border-left:none; border-top:none; }
+  .scanline{
+    position:absolute; left: 10px; right: 10px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--amber), transparent);
+    box-shadow: 0 0 10px 1px rgba(255,176,32,0.7);
+    animation: sweep 2.6s ease-in-out infinite;
+  }
+  @keyframes sweep{
+    0%,100%{ top: 12%; opacity:0.9; }
+    50%{ top: 86%; opacity:0.5; }
+  }
+  .readout{
+    position:absolute; left:50%; top:50%; transform: translate(-50%,-50%);
+    background: #0e1013; border: 1px solid #33383f;
+    border-radius: 8px; padding: 14px 20px;
+    text-align:center;
+  }
+  .readout .label{ font-size:10px; color: var(--text-dim); letter-spacing:0.12em; margin-bottom:6px; }
+  .readout .digits{
+    font-family:'IBM Plex Mono'; font-weight:600; font-size: 30px;
+    color: var(--amber); letter-spacing: 0.04em;
+    text-shadow: 0 0 18px rgba(255,176,32,0.45);
+  }
+  .readout .digits .unit{ font-size:14px; color: var(--text-dim); margin-left:6px; }
+  .status-row{
+    display:flex; align-items:center; justify-content: space-between;
+    margin-top: 18px; font-size: 12.5px; color: var(--text-dim);
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background: var(--sync); display:inline-block; margin-right:6px; animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  @media (prefers-reduced-motion: reduce){
+    .scanline{ animation: none; top: 50%; }
+    .dot{ animation: none; }
+  }
+
+  /* ---------- section shell ---------- */
+  section{ padding: 84px 0; border-top: 1px solid var(--line); }
+  .section-head{ max-width: 560px; margin-bottom: 46px; }
+  .section-head h2{
+    font-family:'Big Shoulders Display'; font-weight:800;
+    font-size: clamp(30px, 3.4vw, 42px); margin: 10px 0 12px; letter-spacing:0.005em;
+  }
+  .section-head p{ color: var(--text-dim); font-size:15.5px; }
+
+  /* ---------- how it works ---------- */
+  .steps{ display:grid; grid-template-columns: repeat(3,1fr); gap: 28px; counter-reset: step; }
+  .step{
+    background: var(--bg-panel);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 26px 24px;
+    position: relative;
+  }
+  .step .num{
+    font-family:'IBM Plex Mono'; color: var(--amber-dim);
+    font-size: 13px; margin-bottom: 14px; letter-spacing:0.08em;
+  }
+  .step h3{ font-size:17px; margin: 0 0 8px; font-weight:600; }
+  .step p{ font-size: 14px; color: var(--text-dim); margin:0; }
+  .step:not(:last-child)::after{
+    content:""; position:absolute; top:50%; right:-28px; width:28px; height:1px;
+    background: var(--line); display:none;
+  }
+  @media (min-width: 860px){ .step:not(:last-child)::after{ display:block; } }
+
+  /* ---------- features ---------- */
+  .features{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow:hidden; }
+  .feature{ background: var(--bg-panel); padding: 28px 24px; }
+  .feature .icon{ width:34px; height:34px; margin-bottom: 16px; color: var(--amber); }
+  .feature h3{ font-size:16px; margin:0 0 8px; font-weight:600; }
+  .feature p{ font-size: 13.8px; color: var(--text-dim); margin:0; }
+
+  /* ---------- who it's for ---------- */
+  .who{ display:grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+  .who-card{ border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 24px; background: linear-gradient(180deg, var(--bg-panel), transparent); }
+  .who-card .tag{ font-family:'IBM Plex Mono'; font-size:11.5px; color: var(--copper); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:10px; }
+  .who-card h3{ font-size: 18px; margin: 0 0 10px; }
+  .who-card p{ font-size:14px; color: var(--text-dim); margin:0; }
+
+  /* ---------- download ---------- */
+  .download{
+    border-radius: 18px;
+    background: radial-gradient(circle at 20% 20%, rgba(255,176,32,0.10), transparent 55%), var(--bg-panel);
+    border: 1px solid var(--line);
+    padding: 54px 48px;
+    display:flex; align-items:center; justify-content: space-between; gap: 40px;
+    flex-wrap: wrap;
+  }
+  .download h2{ font-family:'Big Shoulders Display'; font-size: clamp(28px,3.6vw,40px); font-weight:800; margin:0 0 10px; }
+  .download p{ color: var(--text-dim); font-size:15px; max-width:420px; margin:0 0 24px; }
+  .apk-meta{ display:flex; gap:22px; font-size:12.5px; color: var(--text-dim); margin-top: 18px; }
+  .apk-meta b{ color: var(--text); font-family:'IBM Plex Mono'; font-weight:500; }
+
+  /* ---------- footer ---------- */
+  footer{ border-top: 1px solid var(--line); padding: 34px 0; }
+  .footer-inner{ display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:14px; }
+  .footer-inner .brand-name{ font-size:16px; }
+  .footer-links{ display:flex; gap:24px; font-size: 13.5px; color: var(--text-dim); }
+  .footer-links a:hover{ color: var(--text); }
+
+  @media (max-width: 900px){
+    .hero-grid{ grid-template-columns: 1fr; }
+    .steps{ grid-template-columns: 1fr; }
+    .features{ grid-template-columns: 1fr; }
+    .who{ grid-template-columns: 1fr; }
+    .download{ padding: 36px 26px; }
+  }
+</style>
 </head>
 <body>
-  <main>
-    <h1>MeterPro</h1>
-    <p>Smart electricity meter and bill management.</p>
-    <a href="meterpro.apk">Download Android App</a>
-    <small>Only install releases downloaded from this official page.</small>
-  </main>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" stroke="#ffb020" stroke-width="2"/>
+        <path d="M16 9v7l5 3" stroke="#ffb020" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">Meter<span>Pro</span></span>
+    </div>
+    <nav class="links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#who">Who it's for</a>
+      <a href="#download" class="btn btn-primary">Get the app</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Meter reading, automated</span>
+      <h1>Point your<br>camera. Get an<br><em>exact reading.</em></h1>
+      <p class="lede">MeterPro reads electricity, gas, and water meters straight off the dial. No typing, no guessing digits — scan it and the number is logged and synced.</p>
+      <div class="hero-ctas">
+        <a href="MeterPro.apk" class="btn btn-primary" download>Download for Android</a>
+        <a href="#how" class="btn btn-ghost">See how it works</a>
+      </div>
+      <div class="hero-meta">Android 8.0+ &nbsp;·&nbsp; <span class="mono">v1.0</span> &nbsp;·&nbsp; No account needed to start</div>
+    </div>
+
+    <div class="scan-panel">
+      <div class="scan-frame">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <div class="scanline"></div>
+        <div class="readout">
+          <div class="label">DETECTED READING</div>
+          <div class="digits mono" id="digits">04821.6<span class="unit">kWh</span></div>
+        </div>
+      </div>
+      <div class="status-row">
+        <span><span class="dot"></span>Synced to cloud</span>
+        <span class="mono">0.4s scan time</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Three steps</span>
+      <h2>From meter to record in under a second</h2>
+      <p>Built for the exact sequence a field visit actually follows.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num mono">01 — POINT</div>
+        <h3>Aim at the display</h3>
+        <p>Line up the digits inside the frame. Works on analog dials and digital LCD panels alike.</p>
+      </div>
+      <div class="step">
+        <div class="num mono">02 — SCAN</div>
+        <h3>On-device OCR reads it</h3>
+        <p>The digits are recognized instantly, on the phone — no upload needed to get a result.</p>
+      </div>
+      <div class="step">
+        <div class="num mono">03 — SYNC</div>
+        <h3>Reading is saved and timestamped</h3>
+        <p>Every scan is logged with the meter ID, time, and location, then pushed to the cloud once you're online.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">What it handles</span>
+      <h2>Everything a reading round needs</h2>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="3.4"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+        <h3>Instant OCR reading</h3>
+        <p>Recognizes digit wheels and digital displays without a data connection.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 15a4 4 0 0 1 4-4 5 5 0 0 1 9.6-1.8A3.5 3.5 0 0 1 20 16.5H6"/></svg>
+        <h3>Works fully offline</h3>
+        <p>Basements and utility rooms rarely have signal. Scans queue and sync when you're back online.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v13m0 0-4-4m4 4 4-4"/><path d="M4 19h16"/></svg>
+        <h3>Automatic cloud sync</h3>
+        <p>Readings back up to Firebase the moment a connection is available — nothing to export manually.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v4H4z"/><path d="M4 12h10M4 16h7M4 20h4"/></svg>
+        <h3>History &amp; export</h3>
+        <p>Every past reading per meter, searchable, and exportable as a spreadsheet for reporting.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3"/><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/></svg>
+        <h3>Multi-meter profiles</h3>
+        <p>Track dozens of meters across sites, each with its own ID, unit type, and reading history.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l4-1 10-10-3-3L5 16l-1 4z"/></svg>
+        <h3>Manual correction</h3>
+        <p>Smudged glass or a worn dial won't stop you — edit any digit before it's saved, with a note attached.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="who">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Built for</span>
+      <h2>Whoever's the one walking the route</h2>
+    </div>
+    <div class="who">
+      <div class="who-card">
+        <div class="tag">Field technicians</div>
+        <h3>Meter readers</h3>
+        <p>Cover a full route without typing a single digit by hand, and hand in a clean, timestamped log at the end of the day.</p>
+      </div>
+      <div class="who-card">
+        <div class="tag">Property teams</div>
+        <h3>Facility managers</h3>
+        <p>Keep utility usage per unit or building on record, with history you can pull up the moment a tenant disputes a bill.</p>
+      </div>
+      <div class="who-card">
+        <div class="tag">Personal use</div>
+        <h3>Homeowners</h3>
+        <p>Track your own usage between bills, and catch a spike — a running toilet or a fridge on its way out — before it shows up on the invoice.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <div class="download">
+      <div>
+        <h2>Get MeterPro on your phone</h2>
+        <p>Direct install, no Play Store account required. Enable "install from unknown sources" if prompted — that's normal for a direct APK.</p>
+        <a href="MeterPro.apk" class="btn btn-primary" download>Download APK</a>
+        <div class="apk-meta">
+          <span>Version <b>1.0.0</b></span>
+          <span>Size <b>~90&nbsp;MB</b></span>
+          <span>Requires <b>Android 8.0+</b></span>
+        </div>
+      </div>
+      <svg width="150" height="150" viewBox="0 0 100 100" fill="none">
+        <rect x="10" y="10" width="80" height="80" rx="14" stroke="#2b2f37" stroke-width="2"/>
+        <circle cx="50" cy="50" r="26" stroke="#ffb020" stroke-width="2.5"/>
+        <path d="M50 34v16l11 7" stroke="#ffb020" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span class="brand-name display">Meter<span style="color:var(--amber)">Pro</span></span>
+    <div class="footer-links">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="mailto:support@meterpro.app">Contact</a>
+    </div>
+    <span class="footer-links">&copy; 2026 MeterPro. All rights reserved.</span>
+  </div>
+</footer>
+
+<script>
+  // Signature digit readout: cycles through a few realistic meter values
+  const readings = ["04821.6", "04821.7", "04829.3", "05104.2", "04821.6"];
+  const unit = "kWh";
+  const el = document.getElementById('digits');
+  let i = 0;
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    setInterval(() => {
+      i = (i + 1) % readings.length;
+      el.innerHTML = readings[i] + '<span class="unit">' + unit + '</span>';
+    }, 2600);
+  }
+</script>
+
 </body>
 </html>

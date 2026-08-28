@@ -217,17 +217,35 @@ class OCRService {
         if (kwRegex.hasMatch(line)) {
           final readingFromSameLine = _extractDigitsFromSegment(line);
           if (readingFromSameLine != null &&
-              _isValidReadingRange(readingFromSameLine)) {
+              _isValidReadingRange(readingFromSameLine) &&
+              _digitLength(readingFromSameLine) >= 3) {
             return readingFromSameLine;
           }
 
-          // Check neighbors
-          for (int j = i - 2; j <= i + 2; j++) {
-            if (j >= 0 && j < lines.length && j != i) {
-              final val = _extractDigitsFromSegment(lines[j]);
-              if (val != null && _isValidReadingRange(val)) return val;
+          // Check neighboring lines. Many single-phase meters print the
+          // "kWh" label right next to a small, separately-boxed decimal
+          // digit (e.g. the last, often red/orange, digit of the display).
+          // ML Kit frequently returns that lone digit as its own line right
+          // beside the "kWh" line, closer than the real multi-digit reading.
+          // Picking the FIRST valid neighbor (old behaviour) grabbed that
+          // stray "1" instead of the actual reading. Instead, scan a wider
+          // neighborhood and keep the candidate with the most digits, since
+          // the genuine reading is always the longest run.
+          int? bestVal;
+          int bestLen = 0;
+          for (int j = i - 3; j <= i + 3; j++) {
+            if (j < 0 || j >= lines.length || j == i) continue;
+            final val = _extractDigitsFromSegment(lines[j]);
+            if (val == null || !_isValidReadingRange(val)) continue;
+            final len = _digitLength(val);
+            // Require at least 3 digits so a lone decimal fragment (e.g. a
+            // single "1" or "5") next to the kWh label can never win.
+            if (len >= 3 && len > bestLen) {
+              bestVal = val;
+              bestLen = len;
             }
           }
+          if (bestVal != null) return bestVal;
         }
       }
     }
@@ -237,11 +255,37 @@ class OCRService {
         RegExp(r'units\s*[:.\-]?\s*(\d{1,6})', caseSensitive: false)
             .firstMatch(fullText);
     if (unitMatch != null) {
-      return int.tryParse(unitMatch.group(1)!);
+      final val = int.tryParse(unitMatch.group(1)!);
+      if (val != null) return val;
+    }
+
+    // Last resort: if the "kWh" label itself wasn't recognized clearly
+    // (common with blur/glare on an LCD), but exactly one line on the whole
+    // display is a clean 4-6 digit number, that is almost certainly the
+    // reading. This avoids ever guessing on a bill, which usually has many
+    // multi-digit numbers.
+    final digitOnlyCandidates = <int>[];
+    for (final line in lines) {
+      final digitsOnly =
+          _correctOcrDigitMisreads(line).replaceAll(RegExp(r'[^0-9]'), '');
+      if (digitsOnly.isNotEmpty &&
+          digitsOnly.length == line.replaceAll(RegExp(r'\s'), '').length &&
+          digitsOnly.length >= 4 &&
+          digitsOnly.length <= 6) {
+        final val = int.tryParse(digitsOnly);
+        if (val != null && _isValidReadingRange(val)) {
+          digitOnlyCandidates.add(val);
+        }
+      }
+    }
+    if (digitOnlyCandidates.length == 1) {
+      return digitOnlyCandidates.first;
     }
 
     return null;
   }
+
+  int _digitLength(int value) => value.abs().toString().length;
 
   int? _extractKwhValue(String line) {
     const digitChars = r'[0-9OoIiLlSsZzBb\s.,]{3,14}';

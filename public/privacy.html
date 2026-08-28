@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — MeterPro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14161a;
+    --bg-panel: #1c1f25;
+    --line: #2b2f37;
+    --text: #ece8df;
+    --text-dim: #9a9fa8;
+    --amber: #ffb020;
+    --copper: #c17a42;
+    --wrap: 780px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background: var(--bg); color: var(--text);
+    font-family:'Inter', sans-serif; line-height:1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  a{ color: var(--amber); text-decoration: none; }
+  a:hover{ text-decoration: underline; }
+  .wrap{ max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+
+  header.nav{
+    border-bottom: 1px solid var(--line);
+    padding: 20px 0;
+  }
+  .nav-inner{ display:flex; align-items:center; justify-content: space-between; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-name{ font-family:'Big Shoulders Display'; font-weight:800; font-size:20px; text-transform:uppercase; }
+  .brand-name span{ color: var(--amber); }
+  .back{ font-size: 13.5px; color: var(--text-dim); }
+  .back:hover{ color: var(--text); text-decoration:none; }
+
+  main{ padding: 64px 0 90px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono'; font-size:12.5px; letter-spacing:0.14em;
+    text-transform:uppercase; color: var(--amber);
+  }
+  h1{
+    font-family:'Big Shoulders Display'; font-weight:900; text-transform:uppercase;
+    font-size: clamp(34px, 5vw, 50px); margin: 12px 0 6px; letter-spacing:0.005em;
+  }
+  .updated{ font-family:'IBM Plex Mono'; font-size:12.5px; color: var(--text-dim); margin-bottom: 44px; }
+
+  section{ margin-bottom: 38px; }
+  h2{ font-size: 19px; font-weight:700; margin: 0 0 12px; }
+  p{ color: var(--text-dim); font-size: 15px; margin: 0 0 12px; }
+  ul{ color: var(--text-dim); font-size: 15px; padding-left: 20px; margin: 0 0 12px; }
+  li{ margin-bottom: 6px; }
+  strong{ color: var(--text); }
+
+  .callout{
+    background: var(--bg-panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 20px; font-size: 14px; color: var(--text-dim);
+  }
+  .callout strong{ color: var(--amber); }
+
+  footer{ border-top: 1px solid var(--line); padding: 28px 0; }
+  .footer-inner{ display:flex; justify-content: space-between; flex-wrap:wrap; gap:12px; font-size:13px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" stroke="#ffb020" stroke-width="2"/>
+        <path d="M16 9v7l5 3" stroke="#ffb020" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">Meter<span>Pro</span></span>
+    </div>
+    <a class="back" href="index.html">&larr; Back to MeterPro</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <span class="eyebrow">Legal</span>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated — August 2026</div>
+
+  <section>
+    <p>MeterPro is built to do one job: turn a photo of a meter into an accurate reading. This page explains exactly what the app collects, why, and what it never does with your data.</p>
+  </section>
+
+  <section>
+    <h2>What the app collects</h2>
+    <ul>
+      <li><strong>Meter photos and readings</strong> — captured when you scan a meter, so the digits can be recognized and the reading saved to your history.</li>
+      <li><strong>Meter labels and notes</strong> — anything you type in, such as a meter ID, site name, or a manual correction.</li>
+      <li><strong>Timestamp and, if enabled, location</strong> — attached to each reading so a history entry can be traced back to when and where it was taken.</li>
+      <li><strong>Basic account identifiers</strong> — if you sign in, just enough (such as an email or device ID) to keep your readings tied to your account across devices.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>How scanning works</h2>
+    <p>Text recognition runs <strong>on your device</strong>. A photo is not sent to a server just to read the digits off it — the OCR model processes the image locally, and only the resulting reading (plus the photo, if you choose to keep it) is stored.</p>
+  </section>
+
+  <section>
+    <h2>Where your data is stored</h2>
+    <p>Readings and account data are stored using Firebase (Google Cloud), the backend MeterPro runs on. Data is encrypted in transit and at rest. It is stored only to make your reading history available to you across sessions and devices — not shared with data brokers or advertisers.</p>
+  </section>
+
+  <section>
+    <h2>Permissions the app asks for</h2>
+    <ul>
+      <li><strong>Camera</strong> — required to scan a meter. Nothing is recorded without you opening the scan screen.</li>
+      <li><strong>Storage</strong> — to save scanned photos and let you export your reading history.</li>
+      <li><strong>Location (optional)</strong> — only if you turn it on, to tag readings with where they were taken.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What we don't do</h2>
+    <div class="callout">
+      MeterPro does not sell your data, does not show ads, and does not share your readings or photos with third parties for marketing purposes.
+    </div>
+  </section>
+
+  <section>
+    <h2>Your choices</h2>
+    <ul>
+      <li>Delete individual readings, or your full history, from within the app at any time.</li>
+      <li>Turn location tagging off in Settings.</li>
+      <li>Request full account deletion by contacting us — see below.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>Questions about this policy or your data — <a href="mailto:support@meterpro.app">support@meterpro.app</a></p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>&copy; 2026 MeterPro. All rights reserved.</span>
+    <a href="index.html" style="color:var(--text-dim)">&larr; Back to home</a>
+  </div>
+</footer>
+
+</body>
+</html>

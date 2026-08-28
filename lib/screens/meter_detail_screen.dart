@@ -157,32 +157,46 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
   }
 
   Future<void> _showEditReadingDialog(MeterReadingLog log) async {
-    final ctrl = TextEditingController(text: log.readingKwh.toString());
+    final presentCtrl = TextEditingController(text: log.readingKwh.toString());
+    final baseCtrl = TextEditingController(text: log.baseReadingKwh.toString());
+
     final confirmed = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Reading'),
+        title: const Text('Edit Reading Log'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Previous: ${log.readingKwh} kWh',
-                style:
-                    const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-            const SizedBox(height: 12),
+            const Text('Edit the values for this specific entry.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            const SizedBox(height: 20),
             TextField(
-              controller: ctrl,
+              controller: baseCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Start Reading (kWh)',
+                prefixIcon: Icon(Icons.flag_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: presentCtrl,
               keyboardType: TextInputType.number,
               autofocus: true,
               decoration: const InputDecoration(
-                  labelText: 'New Reading (kWh)', border: OutlineInputBorder()),
+                labelText: 'Present Reading (kWh)',
+                prefixIcon: Icon(Icons.speed_rounded),
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'delete'),
-            child: const Text('Delete Log',
+            child: const Text('Delete Entry',
                 style: TextStyle(color: AppColors.accentRed)),
           ),
           const Spacer(),
@@ -221,12 +235,16 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
         _deleteLog(log);
       }
     } else if (confirmed == 'save') {
-      final newVal = int.tryParse(ctrl.text);
-      if (newVal != null) _updateLogReading(log, newVal);
+      final newPresent = int.tryParse(presentCtrl.text);
+      final newBase = int.tryParse(baseCtrl.text);
+      if (newPresent != null && newBase != null) {
+        _updateLogReading(log, newPresent, newBase);
+      }
     }
   }
 
-  Future<void> _updateLogReading(MeterReadingLog log, int newValue) async {
+  Future<void> _updateLogReading(
+      MeterReadingLog log, int newValue, int newBase) async {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
@@ -235,7 +253,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
           return MeterReadingLog(
             id: l.id,
             readingKwh: newValue,
-            baseReadingKwh: l.baseReadingKwh,
+            baseReadingKwh: newBase,
             timestamp: l.timestamp,
             source: l.source,
           );
@@ -250,8 +268,18 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
         nextPresent = newValue;
       }
 
+      // If we edited the base of the current cycle, update previousReadingKwh
+      // Note: This logic assumes the log's base matches the cycle base if it's the cycle start.
+      // For simplicity, we just sync the meter's previousReadingKwh if this log was the first one.
+      int nextPrevious = _meter.previousReadingKwh;
+      if (_meter.readingHistory.isNotEmpty &&
+          _meter.readingHistory.last.id == log.id) {
+        nextPrevious = newBase;
+      }
+
       final updated = _meter.copyWith(
         presentReadingKwh: nextPresent,
+        previousReadingKwh: nextPrevious,
         readingHistory: updatedHistory,
       );
 
@@ -354,88 +382,152 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
 
   Future<void> _editMeter() async {
     final nameCtrl = TextEditingController(text: _meter.name);
+    final refCtrl = TextEditingController(text: _meter.referenceNo);
+    final meterNoCtrl = TextEditingController(text: _meter.meterNo);
     final readingCtrl =
         TextEditingController(text: _meter.presentReadingKwh.toString());
     final startReadingCtrl =
         TextEditingController(text: _meter.previousReadingKwh.toString());
+
+    int editLoad = _meter.sanctionedLoad;
+    bool editProtected = _meter.isProtected;
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit Meter'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Meter name',
-                hintText: 'e.g. Home meter',
-              ),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setMState) => AlertDialog(
+          title: const Text('Edit Meter Settings'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('BASIC INFO',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textMuted,
+                        letterSpacing: 1)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nameCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Meter Name',
+                    prefixIcon: Icon(Icons.person_outline_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: refCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Reference Number',
+                    prefixIcon: Icon(Icons.numbers_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: meterNoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Meter Serial Number',
+                    prefixIcon: Icon(Icons.qr_code_rounded),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text('READINGS (kWh)',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textMuted,
+                        letterSpacing: 1)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: startReadingCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Cycle Start Reading',
+                    prefixIcon: Icon(Icons.flag_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: readingCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Latest Present Reading',
+                    prefixIcon: Icon(Icons.speed_rounded),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text('TARIFF SETTINGS',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textMuted,
+                        letterSpacing: 1)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  initialValue: editLoad,
+                  decoration: const InputDecoration(
+                    labelText: 'Sanctioned Load',
+                    prefixIcon: Icon(Icons.bolt_rounded),
+                  ),
+                  items: [1, 2, 3, 5, 10, 15, 20]
+                      .map((l) =>
+                          DropdownMenuItem(value: l, child: Text('$l kW')))
+                      .toList(),
+                  onChanged: (v) => setMState(() => editLoad = v ?? 1),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Protected Category',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Lower rates for < 200 units',
+                      style: TextStyle(fontSize: 11)),
+                  value: editProtected,
+                  onChanged: (v) => setMState(() => editProtected = v),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: readingCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Present reading (kWh)',
-                prefixIcon: Icon(Icons.speed_rounded),
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: startReadingCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Start reading (kWh)',
-                prefixIcon: Icon(Icons.flag_outlined),
-              ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Save All Changes'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Save Changes'),
-          ),
-        ],
       ),
     );
+
+    if (confirmed != true || !mounted) return;
+
     final newName = nameCtrl.text.trim();
+    final newRef = refCtrl.text.trim();
+    final newMeterNo = meterNoCtrl.text.trim();
     final newReading = int.tryParse(readingCtrl.text.trim());
     final newStartReading = int.tryParse(startReadingCtrl.text.trim());
-    nameCtrl.dispose();
-    readingCtrl.dispose();
-    startReadingCtrl.dispose();
-    if (confirmed != true || !mounted) return;
-    if (newName.isEmpty || newReading == null || newStartReading == null) {
+
+    if (newName.isEmpty ||
+        newRef.isEmpty ||
+        newReading == null ||
+        newStartReading == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter valid meter details.')),
+        const SnackBar(content: Text('Please fill all required fields.')),
       );
-      return;
-    }
-    if (newStartReading > newReading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Start reading cannot exceed present reading.'),
-          backgroundColor: AppColors.accentRed,
-        ),
-      );
-      return;
-    }
-    if (newName == _meter.name &&
-        newReading == _meter.presentReadingKwh &&
-        newStartReading == _meter.previousReadingKwh) {
       return;
     }
 
     setState(() => _busy = true);
     try {
+      // Sync history if needed
       var updatedHistory = _meter.readingHistory;
       if (updatedHistory.isNotEmpty) {
         updatedHistory = [
@@ -451,22 +543,28 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
             ),
         ];
       }
+
       final updated = _meter.copyWith(
         name: newName,
+        referenceNo: newRef,
+        meterNo: newMeterNo,
         presentReadingKwh: newReading,
         previousReadingKwh: newStartReading,
+        sanctionedLoad: editLoad,
+        isProtected: editProtected,
         readingHistory: updatedHistory,
       );
+
       await MeterRepository.instance.updateMeter(updated);
       if (!mounted) return;
       setState(() => _meter = updated);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Meter details updated.')),
+        const SnackBar(content: Text('Meter details updated successfully!')),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not update meter name: $error')),
+        SnackBar(content: Text('Could not update meter: $error')),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
