@@ -50,6 +50,26 @@ class _AddMeterScreenState extends State<AddMeterScreen> {
     setState(() => _meterNoCtrl.text = result!.meterNo!);
   }
 
+  Future<void> _scanStartReading() async {
+    final result = await Navigator.of(context).push<OCRScanResult>(
+      MaterialPageRoute(
+        builder: (_) => const CameraScannerScreen(
+          initialMode: ScanTargetMode.digitalMeter,
+          allowUnregisteredMeter: true,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      if (result.meterNo != null && _meterNoCtrl.text.isEmpty) {
+        _meterNoCtrl.text = result.meterNo!;
+      }
+      if (result.meterReading != null) {
+        _presReadingCtrl.text = result.meterReading.toString();
+      }
+    });
+  }
+
   String _monthName(int m) {
     const names = [
       '',
@@ -306,6 +326,46 @@ class _AddMeterScreenState extends State<AddMeterScreen> {
           keyboard: TextInputType.number,
           limit: 14,
         ),
+
+        // NEW: Starting Meter Reading
+        _label('STARTING METER READING (kWh)'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _presReadingCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'Current reading on your meter',
+                    prefixIcon: Icon(Icons.speed_rounded,
+                        size: 20, color: AppColors.primary),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: _scanStartReading,
+                borderRadius: BorderRadius.circular(4),
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'Scan',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
 
         // 4. Sanctioned Load
         _label('SANCTIONED LOAD'),

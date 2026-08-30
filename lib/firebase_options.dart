@@ -1,8 +1,3 @@
-// File generated normally by the FlutterFire CLI (`flutterfire configure`).
-//
-// ⚠️ IMPORTANT: The values below are PLACEHOLDERS. Firebase Auth will not
-// work until you replace them with your real project's config.
-
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;

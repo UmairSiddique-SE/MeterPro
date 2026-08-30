@@ -656,7 +656,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
 
     setState(() => _busy = true);
     try {
-      await MeterRepository.instance.deleteMeter(_meter.id);
+      await MeterRepository.instance.deleteMeter(_meter.id, _meter.referenceNo);
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {

@@ -34,6 +34,17 @@ class MeterRepository {
   Future<String> addMeter(MeterModel meter) async {
     final col = _metersCol;
     if (col == null) throw StateError('No signed-in user');
+
+    final ref = meter.referenceNo.trim();
+    final meterNo = meter.meterNo.trim();
+
+    // Record in global registrations for uniqueness
+    await _db.collection('global_registrations').doc(ref).set({
+      'ownerUid': _uid,
+      'meterNo': meterNo,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
     final docRef = col.doc();
     await docRef.set({
       ...meter.toMap(),
@@ -49,29 +60,34 @@ class MeterRepository {
     await col.doc(meter.id).update(meter.toMap());
   }
 
-  Future<void> deleteMeter(String id) async {
+  Future<void> deleteMeter(String id, String referenceNo) async {
     final col = _metersCol;
     if (col == null) throw StateError('No signed-in user');
+
+    // Clean up global registration
+    await _db.collection('global_registrations').doc(referenceNo.trim()).delete();
+
     await col.doc(id).delete();
   }
 
-  /// Checks both identifiers across every user's meter collection.
+  /// Checks both identifiers across global registrations.
   Future<bool> checkGlobalMeterIdentity({
     required String referenceNo,
     required String meterNo,
   }) async {
-    final references = await _db
-        .collectionGroup('meters')
-        .where('referenceNo', isEqualTo: referenceNo.trim())
-        .limit(1)
+    // Check by Reference No (Direct ID lookup, no index needed)
+    final refDoc = await _db
+        .collection('global_registrations')
+        .doc(referenceNo.trim())
         .get();
-    if (references.docs.isNotEmpty) return true;
+    if (refDoc.exists) return true;
 
-    final meterNumbers = await _db
-        .collectionGroup('meters')
+    // Check by Meter No (Simple query on a small flat collection)
+    final serialSnap = await _db
+        .collection('global_registrations')
         .where('meterNo', isEqualTo: meterNo.trim())
         .limit(1)
         .get();
-    return meterNumbers.docs.isNotEmpty;
+    return serialSnap.docs.isNotEmpty;
   }
 }
