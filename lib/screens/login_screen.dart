@@ -108,14 +108,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     Container(
-                      width: 56,
-                      height: 56,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15)),
                       ),
-                      child: const Icon(Icons.speed_rounded,
-                          color: AppColors.accentOrange, size: 30),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset('assets/images/logo.png',
+                            fit: BoxFit.cover),
+                      ),
                     ),
                     const SizedBox(height: 14),
                     const Text('MeterPro',

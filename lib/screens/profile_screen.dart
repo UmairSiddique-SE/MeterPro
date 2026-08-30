@@ -490,8 +490,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       applicationName: 'MeterPro',
       applicationVersion: '1.2.0',
-      applicationIcon: const Icon(Icons.speed_rounded,
-          color: AppColors.accentOrange, size: 42),
+      applicationIcon: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset('assets/images/logo.png', width: 64, height: 64),
+        ),
+      ),
       children: [
         const Text(
             'MeterPro is a smart electricity management tool designed for FESCO consumers to scan, track, and estimate their monthly bills using advanced AI technology.'),

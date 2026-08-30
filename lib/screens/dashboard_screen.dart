@@ -289,11 +289,25 @@ class _DashboardHome extends StatelessWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(greeting,
-                                  style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w700)),
+                              Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.asset(
+                                      'assets/images/logo.png',
+                                      width: 28,
+                                      height: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(greeting,
+                                      style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
                               Text(displayName,
                                   style: const TextStyle(
                                       color: Colors.white,
@@ -589,14 +603,16 @@ class _EmptyMetersCard extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(Icons.speed_rounded,
-                color: AppColors.primary, size: 28),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+            ),
           ),
           const SizedBox(height: 14),
           Text('No meters yet', style: Theme.of(context).textTheme.titleMedium),
