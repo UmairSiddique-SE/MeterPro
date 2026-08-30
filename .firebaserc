@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "metrowatt-2614f"
-  }
+  },
+  "targets": {
+    "metrowatt-2614f": {
+      "hosting": {
+        "meterpro": [
+          "meterpro-official"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

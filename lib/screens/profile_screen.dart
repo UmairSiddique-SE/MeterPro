@@ -490,7 +490,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       applicationName: 'MeterPro',
       applicationVersion: '1.2.0',
-      applicationIcon: const Icon(Icons.bolt_rounded,
+      applicationIcon: const Icon(Icons.speed_rounded,
           color: AppColors.accentOrange, size: 42),
       children: [
         const Text(

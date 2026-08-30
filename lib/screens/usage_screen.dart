@@ -69,10 +69,14 @@ class _UsageScreenState extends State<UsageScreen>
           final startOfWeek = startOfToday.subtract(const Duration(days: 6));
           final startOfMonth = DateTime(now.year, now.month, 1);
 
-          final totalUnits = visibleMeters.fold<double>(0.0, (s, m) => s + m.consumedUnitsKwh);
-          final todayUnits = visibleMeters.fold<double>(0.0, (s, m) => s + m.unitsInPeriod(startOfToday, endOfToday));
-          final weekUnits = visibleMeters.fold<double>(0.0, (s, m) => s + m.unitsInPeriod(startOfWeek, now));
-          final monthUnits = visibleMeters.fold<double>(0.0, (s, m) => s + m.unitsInPeriod(startOfMonth, now));
+          final totalUnits =
+              visibleMeters.fold<double>(0.0, (s, m) => s + m.consumedUnitsKwh);
+          final dailyUnits = visibleMeters.fold<double>(
+              0.0, (s, m) => s + m.unitsInPeriod(startOfToday, endOfToday));
+          final weekUnits = visibleMeters.fold<double>(
+              0.0, (s, m) => s + m.unitsInPeriod(startOfWeek, now));
+          final monthUnits = visibleMeters.fold<double>(
+              0.0, (s, m) => s + m.unitsInPeriod(startOfMonth, now));
 
           final chartPoints = _buildChartPoints(visibleMeters, _tab);
           final hasChart = chartPoints.length >= 2;
@@ -86,8 +90,8 @@ class _UsageScreenState extends State<UsageScreen>
                     meters: meters,
                     selectedMeterName: selectedMeter?.name,
                     totalUnits: totalUnits,
-                    periodUnits: _tab == 0 ? todayUnits : weekUnits,
-                    dailyAverage: monthUnits / 30, // Rough estimate
+                    periodUnits: _tab == 0 ? dailyUnits : weekUnits,
+                    dailyAverage: monthUnits / (now.day), // Correct avg
                     isWeekly: _tab == 1,
                   ),
                 ),
@@ -252,19 +256,19 @@ class _UsageScreenState extends State<UsageScreen>
               Expanded(
                   child: _MetricChip(
                       label: 'TOTAL UNITS',
-                      value: '${totalUnits.toInt()} kWh',
+                      value: '${totalUnits.toInt()} UNIT',
                       accent: Colors.white)),
               const SizedBox(width: 8),
               Expanded(
                   child: _MetricChip(
-                      label: isWeekly ? 'WEEKLY UNITS' : 'TODAY UNITS',
-                      value: '${periodUnits.toInt()} kWh',
+                      label: isWeekly ? 'WEEKLY UNITS' : 'DAILY UNITS',
+                      value: '${periodUnits.toInt()} UNIT',
                       accent: AppColors.accentGreen)),
               const SizedBox(width: 8),
               Expanded(
                   child: _MetricChip(
                       label: 'DAILY AVG',
-                      value: '${dailyAverage.toStringAsFixed(1)} kWh',
+                      value: '${dailyAverage.toStringAsFixed(1)} UNIT',
                       accent: AppColors.accentOrange)),
             ],
           ),
@@ -558,7 +562,7 @@ class _TabSelector extends StatelessWidget {
   final ValueChanged<int> onChanged;
   const _TabSelector({required this.value, required this.onChanged});
 
-  static const _labels = ['Today', 'Weekly'];
+  static const _labels = ['Daily', 'Weekly'];
   static const _icons = [
     Icons.calendar_view_day_rounded,
     Icons.calendar_view_week_rounded,

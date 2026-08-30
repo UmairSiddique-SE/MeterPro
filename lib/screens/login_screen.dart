@@ -114,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.bolt_rounded,
+                      child: const Icon(Icons.speed_rounded,
                           color: AppColors.accentOrange, size: 30),
                     ),
                     const SizedBox(height: 14),

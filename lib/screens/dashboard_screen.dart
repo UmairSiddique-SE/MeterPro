@@ -444,7 +444,7 @@ class _DashboardHome extends StatelessWidget {
                                                     fontWeight:
                                                         FontWeight.w900)),
                                             const SizedBox(width: 4),
-                                            Text('kWh',
+                                            Text('UNIT',
                                                 style: TextStyle(
                                                     color: Colors.white
                                                         .withValues(alpha: 0.4),
@@ -595,7 +595,7 @@ class _EmptyMetersCard extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.bolt_rounded,
+            child: const Icon(Icons.speed_rounded,
                 color: AppColors.primary, size: 28),
           ),
           const SizedBox(height: 14),
