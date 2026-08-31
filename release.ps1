@@ -11,9 +11,9 @@ flutter pub get
 flutter build apk --release
 
 Write-Host "`n[2/4] GitHub Release ban rahi hai..." -ForegroundColor Cyan
-gh release create "v$version" "build\app\outputs\flutter-apk\app-release.apk" --title "MeterPro v$version" --notes "Update v$version"
+gh release create "v$version" "build\app\outputs\flutter-apk\MeterPro.apk" --title "MeterPro v$version" --notes "Update v$version"
 
-$apkUrl = "https://github.com/UmairSiddique-SE/MeterPro/releases/download/v$version/app-release.apk"
+$apkUrl = "https://github.com/UmairSiddique-SE/MeterPro/releases/download/v$version/MeterPro.apk"
 
 Write-Host "`n[3/4] Code GitHub par push ho raha hai..." -ForegroundColor Cyan
 git add .

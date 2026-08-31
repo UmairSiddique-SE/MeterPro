@@ -15,7 +15,7 @@ The app includes an in-app update check using the public Firestore document `app
    flutter clean
    flutter pub get
    flutter build apk --release
-   Copy-Item build\app\outputs\flutter-apk\app-release.apk public\meterpro.apk
+   Copy-Item build\app\outputs\flutter-apk\MeterPro.apk public\MeterPro.apk
    ```
 
 3. Deploy the download page and Firestore rules:
