@@ -286,27 +286,37 @@ class _DashboardHome extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 32,
+                              height: 32,
+                            ),
+                          ),
+                          const Spacer(),
+                          const Text('MeterPro',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1)),
+                          const Spacer(),
+                          const SizedBox(width: 32), // Placeholder for balance
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.asset(
-                                      'assets/images/logo.png',
-                                      width: 28,
-                                      height: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(greeting,
-                                      style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600)),
-                                ],
-                              ),
+                              Text(greeting,
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600)),
                               const SizedBox(height: 4),
                               Text(displayName,
                                   style: const TextStyle(

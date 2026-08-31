@@ -201,16 +201,29 @@ class _AddMeterScreenState extends State<AddMeterScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         toolbarHeight: 76,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Row(
           children: [
-            const Text('Add New Meter',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 21)),
-            Text('Bill Month: ${_monthName(_selectedMonth!)} $_selectedYear',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white70)),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset('assets/images/logo.png', width: 34, height: 34),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Add New Meter',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                Text('Bill Month: ${_monthName(_selectedMonth!)} $_selectedYear',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white70)),
+              ],
+            ),
           ],
         ),
         backgroundColor: AppColors.primary,

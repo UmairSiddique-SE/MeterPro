@@ -244,10 +244,10 @@ class _UsageScreenState extends State<UsageScreen>
                   ),
                 ],
               ),
-              const CircleAvatar(
-                  backgroundColor: Colors.white24,
-                  child: Icon(Icons.analytics_rounded,
-                      color: Colors.white, size: 20)),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset('assets/images/logo.png', width: 36, height: 36),
+              ),
             ],
           ),
           const SizedBox(height: 24),

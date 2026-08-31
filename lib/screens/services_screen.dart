@@ -162,7 +162,16 @@ class ServicesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Utility Services', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset('assets/images/logo.png', width: 28, height: 28),
+            ),
+            const SizedBox(width: 12),
+            const Text('Utility Services', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+          ],
+        ),
         centerTitle: false,
         backgroundColor: Colors.white,
         elevation: 0,

@@ -494,7 +494,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(8.0),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset('assets/images/logo.png', width: 64, height: 64),
+          child: Image.asset('assets/images/logo.png', width: 48, height: 48),
         ),
       ),
       children: [
