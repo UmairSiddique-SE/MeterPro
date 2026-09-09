@@ -1,10 +1,6 @@
-import 'dart:convert';
-import 'dart:math';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:cloud_functions/cloud_functions.dart';
 
 class AuthSignInResult {
   const AuthSignInResult({required this.user, required this.isVerified});
@@ -13,24 +9,22 @@ class AuthSignInResult {
   final bool isVerified;
 }
 
-/// Wraps Firebase Authentication (email/password) for MeterUnit.
+/// Central authentication service for MeterPro.
+///
+/// Firebase Authentication handles the account/password session. Email OTPs
+/// are handled by Firebase Cloud Functions so the EmailJS private key and OTP
+/// generation never ship inside the Flutter client.
 class AuthService {
   AuthService._();
   static final AuthService instance = AuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  String? _pendingOtp;
-  DateTime? _otpExpiresAt;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
-  static const _emailJsServiceId = 'service_zue4ncs';
-  static const _emailJsTemplateId = 'template_hkznxbc';
-  static const _emailJsPublicKey = 'oLYVdT8DgvxIUdOjj';
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  /// Creates a new Firebase account. Throws [FirebaseAuthException] on failure
-  /// (e.g. 'email-already-in-use', 'weak-password').
   Future<User?> signUp({
     required String email,
     required String password,
@@ -52,8 +46,8 @@ class AuthService {
     String? displayName,
     String? phoneNumber,
   }) async {
-    if (displayName != null && displayName.isNotEmpty) {
-      await user.updateDisplayName(displayName);
+    if (displayName != null && displayName.trim().isNotEmpty) {
+      await user.updateDisplayName(displayName.trim());
     }
     await _firestore.collection('users').doc(user.uid).set({
       'email': email.trim(),
@@ -63,8 +57,6 @@ class AuthService {
     }).timeout(const Duration(seconds: 15));
   }
 
-  /// Signs in an existing user. Throws [FirebaseAuthException] on failure
-  /// (e.g. 'user-not-found', 'wrong-password', 'invalid-credential').
   Future<AuthSignInResult> signIn({
     required String email,
     required String password,
@@ -74,72 +66,53 @@ class AuthService {
       password: password,
     );
     final user = credential.user;
-    return AuthSignInResult(user: user, isVerified: await isOtpVerified());
+    return AuthSignInResult(
+      user: user,
+      isVerified: await isOtpVerified(),
+    );
   }
 
   Future<void> requestOtp({String? email, String? name}) async {
-    final toEmail = (email ?? _auth.currentUser?.email ?? '').trim();
-    if (toEmail.isEmpty) throw StateError('No email address found.');
-    final privateKey = dotenv.env['EMAILJS_PRIVATE_KEY']?.trim() ?? '';
-    if (privateKey.isEmpty) {
-      throw StateError(
-        'EmailJS private key is missing from .env.',
+    if (_auth.currentUser == null) {
+      throw FirebaseFunctionsException(
+        code: 'unauthenticated',
+        message: 'Sign in before requesting a verification code.',
       );
     }
 
-    final code = (Random.secure().nextInt(900000) + 100000).toString();
-    final response = await http
-        .post(
-          Uri.parse('https://api.emailjs.com/api/v1.0/email/send'),
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'service_id': _emailJsServiceId,
-            'template_id': _emailJsTemplateId,
-            'user_id': _emailJsPublicKey,
-            'accessToken': privateKey,
-            'template_params': {
-              'to_email': toEmail,
-              'recipient_email': toEmail,
-              'email': toEmail,
-              'to_name': name?.trim() ?? toEmail.split('@').first,
-              'name': name?.trim() ?? toEmail.split('@').first,
-              'otp_code': code,
-              'app_name': 'MeterPro',
-            },
-          }),
-        )
-        .timeout(const Duration(seconds: 20));
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final details = response.body.trim();
-      throw StateError(
-        'EmailJS failed (${response.statusCode})${details.isEmpty ? '.' : ': $details'}',
-      );
-    }
-    _pendingOtp = code;
-    _otpExpiresAt = DateTime.now().add(const Duration(minutes: 5));
+    await _functions.httpsCallable('requestEmailOtp').call(<String, dynamic>{
+      if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+    });
   }
 
   Future<void> verifyOtp(String code) async {
-    if (_pendingOtp == null || _otpExpiresAt == null) {
-      throw StateError('Request a new code first.');
+    final normalized = code.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(normalized)) {
+      throw FirebaseFunctionsException(
+        code: 'invalid-argument',
+        message: 'Enter a six-digit code.',
+      );
     }
-    if (DateTime.now().isAfter(_otpExpiresAt!)) {
-      _pendingOtp = null;
-      throw StateError('expired');
-    }
-    if (code != _pendingOtp) throw StateError('invalid');
-    _pendingOtp = null;
+
+    await _functions.httpsCallable('verifyEmailOtp').call(<String, dynamic>{
+      'code': normalized,
+    });
+
+    // Cloud Functions sets the emailOtpVerified custom claim. Refresh the
+    // local ID token so the claim is immediately available to the app.
+    await _auth.currentUser?.getIdToken(true);
   }
 
   Future<bool> isOtpVerified() async {
     final user = _auth.currentUser;
     if (user == null) return false;
-    final profile = await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .get()
-        .timeout(const Duration(seconds: 15));
-    return profile.exists;
+
+    try {
+      final token = await user.getIdTokenResult(true);
+      return token.claims?['emailOtpVerified'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> updateProfileName(String name) async {
@@ -174,7 +147,6 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
-  /// Human-readable message for a FirebaseAuthException.
   static String messageFor(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
