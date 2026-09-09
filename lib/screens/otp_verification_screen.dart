@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/auth_service.dart';
@@ -80,6 +82,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     } on FirebaseAuthException catch (error) {
       _clearCode(markInvalid: true);
       _show(AuthService.messageFor(error));
+    } on FirebaseFunctionsException catch (error) {
+      _clearCode(markInvalid: true);
+      _show(_messageForFunction(error));
     } catch (error) {
       _clearCode(markInvalid: true);
       _show(_messageFor(error,
@@ -91,6 +96,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> _resend({bool isInitial = false}) async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       await AuthService.instance.requestOtp(
@@ -102,6 +108,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       _show(isInitial
           ? 'A verification code has been sent to ${widget.email}.'
           : 'A new code has been sent to ${widget.email}.');
+    } on FirebaseFunctionsException catch (error) {
+      _show(_messageForFunction(error));
     } catch (error) {
       _show(_messageFor(error,
           fallback: 'We could not send a code. Please try again shortly.'));
@@ -166,25 +174,29 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 
+  String _messageForFunction(FirebaseFunctionsException error) {
+    switch (error.code) {
+      case 'resource-exhausted':
+        return 'Please wait one minute before requesting another code.';
+      case 'unauthenticated':
+        return 'Your session has expired. Please sign in again.';
+      case 'invalid-argument':
+        return error.message ?? 'Enter a valid 6-digit code.';
+      case 'permission-denied':
+        return 'That code is invalid or has expired. Request a new one.';
+      case 'internal':
+        return 'The verification email could not be sent. Please try again shortly.';
+      default:
+        return error.message ?? 'Verification service failed. Please try again.';
+    }
+  }
+
   String _messageFor(Object error, {required String fallback}) {
     final message = error.toString();
-    if (message.contains('EmailJS private key is missing')) {
-      return 'EmailJS private key is not configured. Start the app with the EMAILJS_PRIVATE_KEY dart define.';
-    }
-    if (message.contains('EmailJS failed')) {
-      final details = message.replaceFirst('Bad state: EmailJS failed ', '');
-      return 'EmailJS rejected the request: $details';
-    }
     if (message.contains('SocketException') ||
         message.contains('ClientException') ||
         message.contains('TimeoutException')) {
       return 'Could not reach the verification service. Check your internet connection and try again.';
-    }
-    if (message.contains('resource-exhausted')) {
-      return 'Please wait one minute before requesting another code.';
-    }
-    if (message.contains('unauthenticated')) {
-      return 'Your session has expired. Please sign in again.';
     }
     if (message.contains('expired')) {
       return 'That code has expired. Request a new one and try again.';
@@ -245,7 +257,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
             ),
             const SizedBox(height: 40),
-
             Row(
               children: List.generate(6, (index) {
                 return Expanded(
@@ -293,9 +304,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 );
               }),
             ),
-
             const SizedBox(height: 48),
-
             if (_loading)
               const CircularProgressIndicator()
             else ...[
@@ -328,9 +337,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
-
             const SizedBox(height: 20),
-            // Footer help
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
