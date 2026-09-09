@@ -12,7 +12,7 @@ const emailJsPrivateKey = defineSecret('EMAILJS_PRIVATE_KEY');
 const OTP_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
-const APP_NAME = 'MeterUnit';
+const APP_NAME = 'MeterPro';
 
 function requireUser(request) {
   if (!request.auth?.uid || !request.auth.token.email) {
@@ -102,30 +102,43 @@ exports.requestEmailOtp = onCall(
 exports.verifyEmailOtp = onCall(
   {region: 'us-central1'},
   async (request) => {
-  const {uid} = requireUser(request);
-  const code = request.data?.code;
-  if (typeof code !== 'string' || !/^\d{6}$/.test(code)) {
-    throw new HttpsError('invalid-argument', 'Enter a six-digit code.');
-  }
-  const otpRef = admin.firestore().collection('emailOtps').doc(uid);
-  const verified = await admin.firestore().runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(otpRef);
-    const otp = snapshot.data();
-    if (!otp || otp.expiresAt.toMillis() <= Date.now() || otp.attempts >= MAX_ATTEMPTS) {
+    const {uid} = requireUser(request);
+    const code = request.data?.code;
+    if (typeof code !== 'string' || !/^\d{6}$/.test(code)) {
+      throw new HttpsError('invalid-argument', 'Enter a six-digit code.');
+    }
+
+    const otpRef = admin.firestore().collection('emailOtps').doc(uid);
+    const verified = await admin.firestore().runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(otpRef);
+      const otp = snapshot.data();
+      if (!otp || otp.expiresAt.toMillis() <= Date.now() || otp.attempts >= MAX_ATTEMPTS) {
+        transaction.delete(otpRef);
+        return false;
+      }
+
+      const submittedHash = await hashOtp(code, otp.salt);
+      const matches = crypto.timingSafeEqual(
+        Buffer.from(submittedHash, 'hex'),
+        Buffer.from(otp.codeHash, 'hex'),
+      );
+
+      if (!matches) {
+        transaction.update(otpRef, {
+          attempts: admin.firestore.FieldValue.increment(1),
+        });
+        return false;
+      }
+
       transaction.delete(otpRef);
-      return false;
+      return true;
+    });
+
+    if (!verified) {
+      throw new HttpsError('permission-denied', 'Invalid or expired code.');
     }
-    const submittedHash = await hashOtp(code, otp.salt);
-    const matches = crypto.timingSafeEqual(Buffer.from(submittedHash, 'hex'), Buffer.from(otp.codeHash, 'hex'));
-    if (!matches) {
-      transaction.update(otpRef, {attempts: admin.firestore.FieldValue.increment(1)});
-      return false;
-    }
-    transaction.delete(otpRef);
-    return true;
-  });
-  if (!verified) throw new HttpsError('permission-denied', 'Invalid or expired code.');
-  await admin.auth().setCustomUserClaims(uid, {emailOtpVerified: true});
-  return {verified: true};
+
+    await admin.auth().setCustomUserClaims(uid, {emailOtpVerified: true});
+    return {verified: true};
   },
 );
