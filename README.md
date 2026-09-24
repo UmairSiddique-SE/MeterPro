@@ -1,53 +1,71 @@
-# MeterPro
+# MeterPro — Meter Unit Tracker & Electricity Bill App
 
-Flutter app for electricity meter and bill management.
+**MeterPro by Umair** is a meter unit tracker and electricity bill management app for tracking electricity meter readings, units, estimated bills, and meter history.
 
-Authentication uses Firebase Authentication email/password accounts with a custom six-digit email OTP. Firebase's email-verification links are not used. OTPs are generated, hashed, rate-limited, and checked by Firebase Cloud Functions; verified users receive the `emailOtpVerified` custom claim.
+**Search terms:** meter unit tracker · meter unit · meter app · meter tracker · electricity unit tracker · meter reading app · MeterPro by Umair · meter app by Umair
 
-## Public Android release
+**Official website:** https://meterpro-official.web.app/
 
-The app includes an in-app update check using the public Firestore document `app_config/android`.
 
-1. Create a private release key and copy `android/key.properties.example` to `android/key.properties`.
-2. Fill in the keystore values, then build the signed APK:
+MeterPro is a Flutter application for electricity meter and bill management, with Firebase-backed authentication, OTP verification, cloud functions, and protected meter data.
 
-   ```powershell
-   flutter clean
-   flutter pub get
-   flutter build apk --release
-   Rename-Item build\app\outputs\flutter-apk\app-release.apk MeterPro.apk -Force
-   Copy-Item build\app\outputs\flutter-apk\MeterPro.apk public\MeterPro.apk
-   ```
+## Highlights
 
-3. Deploy the download page and Firestore rules:
+- Firebase Authentication with email/password
+- Custom six-digit email OTP verification
+- OTP generation, hashing, rate limiting, expiry, and failed-attempt protection
+- Firebase Cloud Functions for server-side OTP handling
+- Firestore-backed meter data
+- Public Android release/update workflow
+- Google ML Kit and camera capabilities
+- Firebase Hosting and Firestore security rules
 
-   ```powershell
-   firebase deploy --only hosting,firestore:rules
-   ```
+## Technology
 
-4. In Firestore, create `app_config/android` with `version`, `buildNumber`, `apkUrl`, `releaseNotes`, and `forceUpdate` fields. Increase `buildNumber` for every release. The APK URL should be `https://metrowatt-2614f.web.app/meterpro.apk`.
+- Dart
+- Flutter
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Cloud Functions
+- Google ML Kit
+- Camera
+- Firebase Hosting
 
-Never commit `android/key.properties` or the release keystore. Keep a secure backup of both the keystore and its passwords; all future APK updates must use the same signing key.
+## Android release
 
-## Deploy the OTP mailer
+For signed Android releases:
 
-1. The Firebase project is already set to `metrowatt-2614f` in `.firebaserc`. In Firebase Console, enable **Authentication \u2192 Sign-in method \u2192 Email/Password** and create Firestore if it is not already enabled.
-2. From `functions`, run `npm install`.
-3. EmailJS has a service called **MeterPro** with service ID `service_zue4ncs`. Create an EmailJS template that uses `{{to_email}}`, `{{to_name}}`, and `{{otp_code}}`; configure its sender as a verified address/domain in EmailJS for deliverability. Set the EmailJS values as Firebase secrets:
+1. Create a private release keystore.
+2. Copy `android/key.properties.example` to `android/key.properties`.
+3. Configure the local signing values.
+4. Build the release APK:
 
-   ```powershell
-   firebase functions:secrets:set EMAILJS_SERVICE_ID # enter: service_zue4ncs
-   firebase functions:secrets:set EMAILJS_TEMPLATE_ID
-   firebase functions:secrets:set EMAILJS_PUBLIC_KEY
-   firebase functions:secrets:set EMAILJS_PRIVATE_KEY
-   ```
+```powershell
+flutter clean
+flutter pub get
+flutter build apk --release
+```
 
-4. Deploy both the server functions and rules:
+Never commit `android/key.properties`, private signing keys, or passwords.
 
-   ```powershell
-   firebase deploy --only functions,firestore:rules
-   ```
+## OTP mailer
 
-The OTP is valid for 5 minutes, replaces any prior code, can be resent once per minute, and is invalidated after five failed attempts. Do not put EmailJS private keys in the Flutter app.
+The OTP mailer is implemented through Firebase Cloud Functions and an external email delivery service. Provider credentials and private keys must be stored as deployment secrets and must never be placed in the Flutter client.
 
-After deployment, create an account in the app. A valid six-digit code now opens the dashboard; until verification, Firestore meter data remains protected.
+The OTP flow is designed with a five-minute validity period, resend throttling, replacement of previous codes, and failed-attempt protection.
+
+## Development
+
+Install Flutter dependencies with:
+
+```bash
+flutter pub get
+```
+
+Firebase project configuration and deployment secrets are environment/deployment specific and should not be committed to the repository.
+
+## Maintainer
+
+**Umair Siddique**
+
+GitHub: https://github.com/UmairSiddique-SE

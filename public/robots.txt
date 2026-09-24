@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://meterpro-official.web.app/sitemap.xml
+Sitemap: https://meterpro-official.web.app/sitemap-google.xml

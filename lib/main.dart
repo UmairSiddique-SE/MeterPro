@@ -1,5 +1,4 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
@@ -10,12 +9,13 @@ import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(const MeterUnitApp());
 }
 
@@ -90,11 +90,25 @@ class _AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         final user = snapshot.data;
         if (user == null) return const LoginScreen();
+
         return FutureBuilder<bool>(
           future: AuthService.instance.isOtpVerified(),
+<<<<<<< HEAD
           builder: (context, verified) => verified.data == true
               ? DashboardScreen(themeProvider: themeProvider)
               : const LoginScreen(),
+=======
+          builder: (context, verified) {
+            if (verified.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            return verified.data == true
+                ? const DashboardScreen()
+                : const LoginScreen();
+          },
+>>>>>>> 9e9dd51c17095555b70066c40a63708e8e4dda7a
         );
       },
     );
