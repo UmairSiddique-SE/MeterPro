@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/app_update_service.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,24 +19,69 @@ void main() async {
   runApp(const MeterUnitApp());
 }
 
-class MeterUnitApp extends StatelessWidget {
+class MeterUnitApp extends StatefulWidget {
   const MeterUnitApp({super.key});
 
   @override
+  State<MeterUnitApp> createState() => _MeterUnitAppState();
+}
+
+class _MeterUnitAppState extends State<MeterUnitApp> {
+  final ThemeProvider _themeProvider = ThemeProvider();
+
+  @override
+  void dispose() {
+    _themeProvider.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MeterPro',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const _AppUpdateGate(
-        child: _AuthGate(),
-      ),
+    return ListenableBuilder(
+      listenable: _themeProvider,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'MeterPro',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: _themeProvider.mode,
+          home: _AppUpdateGate(
+            child: _SplashGate(themeProvider: _themeProvider),
+          ),
+        );
+      },
     );
   }
 }
 
+// ── Splash → Auth gate ───────────────────────────────────────────────────────
+class _SplashGate extends StatefulWidget {
+  final ThemeProvider themeProvider;
+  const _SplashGate({required this.themeProvider});
+
+  @override
+  State<_SplashGate> createState() => _SplashGateState();
+}
+
+class _SplashGateState extends State<_SplashGate> {
+  bool _splashDone = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_splashDone) {
+      return SplashScreen(
+        onComplete: () => setState(() => _splashDone = true),
+      );
+    }
+    return _AuthGate(themeProvider: widget.themeProvider);
+  }
+}
+
+// ── Auth gate ────────────────────────────────────────────────────────────────
 class _AuthGate extends StatelessWidget {
-  const _AuthGate();
+  final ThemeProvider themeProvider;
+  const _AuthGate({required this.themeProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +93,7 @@ class _AuthGate extends StatelessWidget {
         return FutureBuilder<bool>(
           future: AuthService.instance.isOtpVerified(),
           builder: (context, verified) => verified.data == true
-              ? const DashboardScreen()
+              ? DashboardScreen(themeProvider: themeProvider)
               : const LoginScreen(),
         );
       },
@@ -54,9 +101,9 @@ class _AuthGate extends StatelessWidget {
   }
 }
 
+// ── App update gate ──────────────────────────────────────────────────────────
 class _AppUpdateGate extends StatefulWidget {
   final Widget child;
-
   const _AppUpdateGate({required this.child});
 
   @override

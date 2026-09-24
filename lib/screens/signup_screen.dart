@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import 'login_screen.dart' show GlassCard, FieldLabel, PremiumButton;
 import 'otp_verification_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -34,8 +35,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _createAccount() async {
     if (!_agree) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please agree to the Terms & Privacy Policy')),
+        const SnackBar(content: Text('Please agree to the Terms & Privacy Policy')),
       );
       return;
     }
@@ -45,9 +45,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final email = _emailCtrl.text.trim();
 
     try {
-      // Create the Firebase account before starting verification. Previously it
-      // was created only after entering the OTP, so sign-in could report
-      // "account not found" even though the user had already started signup.
       await AuthService.instance.signUp(
         email: email,
         password: _passCtrl.text,
@@ -64,176 +61,263 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_signupError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_signupError(e))));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   String _signupError(Object error) {
-    if (error is FirebaseAuthException) {
-      return AuthService.messageFor(error);
-    }
+    if (error is FirebaseAuthException) return AuthService.messageFor(error);
     return 'Could not create your account. Please try again.';
   }
 
-  InputDecoration _dec(String hint) => InputDecoration(hintText: hint);
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor:
+          isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        leading: IconButton(
+          icon: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.darkSurface2
+                  : AppColors.lightSurface2,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color:
+                      isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            ),
+            child: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 16,
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : AppColors.lightTextPrimary,
+            ),
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Create your account',
-                    style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 4),
-                Text('Join MeterPro to track your usage',
-                    style: Theme.of(context).textTheme.bodyMedium),
-                const SizedBox(height: 24),
-                _label('FULL NAME'),
-                TextFormField(
-                  controller: _nameCtrl,
-                  decoration: _dec('Umair'),
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Required' : null,
+          padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              Text(
+                'Create account',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontSize: 26),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Join MeterPro to start tracking your electricity usage',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.lightTextSecondary,
                 ),
-                const SizedBox(height: 16),
-                _label('EMAIL ADDRESS'),
-                TextFormField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: _dec('you@example.com'),
-                  validator: (v) => (v == null || !v.contains('@'))
-                      ? 'Enter a valid email'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                _label('PASSWORD'),
-                TextFormField(
-                  controller: _passCtrl,
-                  obscureText: _obscure1,
-                  decoration: _dec('Min. 8 characters').copyWith(
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure1
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined),
-                      onPressed: () => setState(() => _obscure1 = !_obscure1),
-                    ),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.length < 8) ? 'Min. 8 characters' : null,
-                ),
-                const SizedBox(height: 16),
-                _label('CONFIRM PASSWORD'),
-                TextFormField(
-                  controller: _confirmCtrl,
-                  obscureText: _obscure2,
-                  decoration: _dec('Re-enter password').copyWith(
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure2
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined),
-                      onPressed: () => setState(() => _obscure2 = !_obscure2),
-                    ),
-                  ),
-                  validator: (v) =>
-                      v != _passCtrl.text ? 'Passwords do not match' : null,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Checkbox(
-                      value: _agree,
-                      onChanged: (v) => setState(() => _agree = v ?? false),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: RichText(
-                          text: const TextSpan(
-                            style: TextStyle(
-                                color: AppColors.textSecondary, fontSize: 13),
-                            children: [
-                              TextSpan(text: "I agree to MeterPro's "),
-                              TextSpan(
-                                  text: 'Terms of Service',
-                                  style: TextStyle(color: AppColors.primary)),
-                              TextSpan(text: ' and '),
-                              TextSpan(
-                                  text: 'Privacy Policy',
-                                  style: TextStyle(color: AppColors.primary)),
-                            ],
+              ),
+              const SizedBox(height: 28),
+
+              GlassCard(
+                isDark: isDark,
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const FieldLabel('FULL NAME'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _nameCtrl,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          hintText: 'Your full name',
+                          prefixIcon:
+                              Icon(Icons.person_outline_rounded, size: 20),
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 18),
+
+                      const FieldLabel('EMAIL ADDRESS'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          hintText: 'you@example.com',
+                          prefixIcon: Icon(
+                              Icons.alternate_email_rounded,
+                              size: 20),
+                        ),
+                        validator: (v) => (v == null || !v.contains('@'))
+                            ? 'Enter a valid email'
+                            : null,
+                      ),
+                      const SizedBox(height: 18),
+
+                      const FieldLabel('PASSWORD'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _passCtrl,
+                        obscureText: _obscure1,
+                        decoration: InputDecoration(
+                          hintText: 'Min. 8 characters',
+                          prefixIcon: const Icon(
+                              Icons.lock_outline_rounded,
+                              size: 20),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscure1
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscure1 = !_obscure1),
+                          ),
+                        ),
+                        validator: (v) => (v == null || v.length < 8)
+                            ? 'Min. 8 characters'
+                            : null,
+                      ),
+                      const SizedBox(height: 18),
+
+                      const FieldLabel('CONFIRM PASSWORD'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _confirmCtrl,
+                        obscureText: _obscure2,
+                        decoration: InputDecoration(
+                          hintText: 'Re-enter password',
+                          prefixIcon: const Icon(
+                              Icons.lock_outline_rounded,
+                              size: 20),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscure2
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscure2 = !_obscure2),
+                          ),
+                        ),
+                        validator: (v) => v != _passCtrl.text
+                            ? 'Passwords do not match'
+                            : null,
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Terms checkbox
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Checkbox(
+                              value: _agree,
+                              onChanged: (v) =>
+                                  setState(() => _agree = v ?? false),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: RichText(
+                                text: TextSpan(
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.lightTextSecondary,
+                                  ),
+                                  children: const [
+                                    TextSpan(text: "I agree to MeterPro's "),
+                                    TextSpan(
+                                        text: 'Terms of Service',
+                                        style: TextStyle(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w600)),
+                                    TextSpan(text: ' and '),
+                                    TextSpan(
+                                        text: 'Privacy Policy',
+                                        style: TextStyle(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      PremiumButton(
+                        loading: _loading,
+                        onPressed: _createAccount,
+                        label: 'Create Account',
+                        icon: Icons.check_rounded,
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      Center(
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
+                              ),
+                              children: const [
+                                TextSpan(text: 'Already have an account? '),
+                                TextSpan(
+                                  text: 'Sign in',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: _loading ? null : _createAccount,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Create Account'),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13),
-                        children: [
-                          TextSpan(text: 'Already have an account? '),
-                          TextSpan(
-                              text: 'Sign in',
-                              style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-                letterSpacing: 0.5)),
-      );
 }

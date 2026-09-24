@@ -166,8 +166,10 @@ BillBreakdown calculateBillBreakdown(int units,
   final taxableAmount = netEnergyCharges;
   final salesTax = taxableAmount * TaxConfig.gstPercentage;
 
+  // Add Rs 200 safety buffer so the estimate is closer to the actual billed amount
+  const estimationBuffer = 200.0;
   final totalBill =
-      netEnergyCharges + electricityDuty + fcSurcharge + fpa + salesTax + tvFee;
+      netEnergyCharges + electricityDuty + fcSurcharge + fpa + salesTax + tvFee + estimationBuffer;
 
   return BillBreakdown(
     totalUnits: units,

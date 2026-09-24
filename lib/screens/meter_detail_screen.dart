@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/meter.dart';
 import '../services/meter_repository.dart';
+import '../services/ocr_service.dart';
 import '../theme/app_theme.dart';
+import 'camera_scanner_screen.dart';
 
 final _pkr =
     NumberFormat.currency(locale: 'en_US', symbol: 'Rs ', decimalDigits: 0);
@@ -41,20 +43,248 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
   }
 
   Future<void> _showAddReadingOptions() async {
+    // Show choice: Camera Scan or Manual Entry
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Text(
+              'Add Meter Reading',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            // Monthly usage summary
+            _buildMonthlyUsageSummary(),
+            const SizedBox(height: 20),
+            // Camera Scan option
+            _buildReadingOptionCard(
+              icon: Icons.qr_code_scanner_rounded,
+              iconColor: AppColors.primary,
+              title: 'Camera Scan',
+              subtitle: 'Point camera at meter — auto-detects kWh reading',
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _openCameraScanForReading();
+              },
+            ),
+            const SizedBox(height: 12),
+            // Manual entry option
+            _buildReadingOptionCard(
+              icon: Icons.edit_rounded,
+              iconColor: AppColors.accentOrange,
+              title: 'Manual Entry',
+              subtitle: 'Type the reading digits from meter display',
+              onTap: () {
+                Navigator.pop(ctx);
+                _showManualEntrySheet();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthlyUsageSummary() {
+    final consumed = _meter.consumedUnitsKwh;
+    final bill = _meter.estimatedBillPkr;
+    final lastReading = _meter.readingHistory.isNotEmpty
+        ? _meter.readingHistory.first
+        : null;
+    final lastReadingDate = lastReading != null
+        ? DateFormat('dd MMM, hh:mm a').format(lastReading.timestamp)
+        : 'No reading yet';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.bolt_rounded,
+                  size: 14, color: AppColors.primary),
+              SizedBox(width: 4),
+              Text('THIS MONTH SO FAR',
+                  style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                      letterSpacing: 0.8)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _summaryStatItem('$consumed kWh', 'Consumed'),
+              Container(
+                  width: 1,
+                  height: 28,
+                  color: AppColors.border),
+              _summaryStatItem(
+                  _pkr.format(bill), 'Est. Bill'),
+              Container(
+                  width: 1,
+                  height: 28,
+                  color: AppColors.border),
+              _summaryStatItem(
+                  '${_meter.presentReadingKwh} kWh', 'Present'),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Last reading: $lastReadingDate',
+            style: const TextStyle(
+                fontSize: 10, color: AppColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryStatItem(String value, String label) {
+    return Column(
+      children: [
+        Text(value,
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary)),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 9,
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _buildReadingOptionCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: iconColor.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textMuted)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openCameraScanForReading() async {
+    final result = await Navigator.of(context).push<OCRScanResult>(
+      MaterialPageRoute(
+        builder: (_) => CameraScannerScreen(
+          expectedReferenceNo: _meter.meterNo,
+          minimumReading: _meter.previousReadingKwh > 0
+              ? _meter.previousReadingKwh
+              : null,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+
+    // Only use kWh reading — wait for it, don't accept garbage
+    final reading = result.meterReading;
+    if (reading == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'kWh reading not detected. Hold camera closer to LCD display.'),
+          backgroundColor: AppColors.accentRed,
+        ),
+      );
+      return;
+    }
+    await _applyNewReadingWithSource(reading, 'Camera Scan');
+  }
+
+  Future<void> _showManualEntrySheet() async {
     final TextEditingController readingCtrl = TextEditingController();
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-          ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -67,7 +297,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                 child: Container(
                   width: 40,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 24),
+                  margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2),
@@ -75,16 +305,16 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                 ),
               ),
               const Text(
-                'Add Meter Reading',
+                'Manual Reading Entry',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Enter the digits from your meter display below.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              const SizedBox(height: 6),
+              Text(
+                'Current: ${_meter.presentReadingKwh} kWh  •  Previous: ${_meter.previousReadingKwh} kWh',
+                style: const TextStyle(
+                    color: AppColors.textMuted, fontSize: 12),
               ),
-              const SizedBox(height: 28),
-
+              const SizedBox(height: 20),
               const Text(
                 'METER READING (kWh)',
                 style: TextStyle(
@@ -98,15 +328,15 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                 controller: readingCtrl,
                 keyboardType: TextInputType.number,
                 autofocus: true,
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    fontSize: 24, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
-                  hintText: 'e.g. 130019',
-                  hintStyle:
-                      TextStyle(color: Colors.grey.shade300, fontSize: 20),
+                  hintText: 'e.g. ${_meter.presentReadingKwh + 50}',
+                  hintStyle: TextStyle(
+                      color: Colors.grey.shade300, fontSize: 20),
                   suffixText: 'kWh',
-                  prefixIcon:
-                      const Icon(Icons.speed_rounded, color: AppColors.primary),
+                  prefixIcon: const Icon(Icons.speed_rounded,
+                      color: AppColors.primary),
                   filled: true,
                   fillColor: AppColors.background,
                   border: OutlineInputBorder(
@@ -114,12 +344,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                       borderSide: BorderSide.none),
                 ),
               ),
-
-              const SizedBox(height: 20),
-
-              const SizedBox(height: 32),
-
-              // Confirm Button
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -131,15 +356,15 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content:
-                                Text('Please enter a valid numeric reading')),
+                            content: Text(
+                                'Please enter a valid numeric reading')),
                       );
                     }
                   },
                   icon: const Icon(Icons.check_circle_outline_rounded),
-                  label: const Text('Save & Confirm Reading',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  label: const Text('Save Reading',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: AppColors.primary,
@@ -331,6 +556,11 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
   }
 
   Future<void> _applyNewReading(int newReading) async {
+    await _applyNewReadingWithSource(newReading, 'Manual Entry');
+  }
+
+  Future<void> _applyNewReadingWithSource(
+      int newReading, String source) async {
     if (newReading < _meter.previousReadingKwh) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -351,7 +581,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
         readingKwh: newReading,
         baseReadingKwh: _meter.previousReadingKwh,
         timestamp: DateTime.now(),
-        source: 'Manual Entry',
+        source: source,
       );
       final updatedLogs = [newLog, ..._meter.readingHistory];
 
@@ -366,7 +596,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:
-              Text('Reading $newReading kWh saved • Consumed: $consumed kWh'),
+              Text('✓ Reading $newReading kWh saved • Used: $consumed kWh'),
           backgroundColor: AppColors.primary,
         ),
       );

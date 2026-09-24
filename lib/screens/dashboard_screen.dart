@@ -10,6 +10,7 @@ import '../models/meter.dart';
 import '../services/meter_repository.dart';
 import '../services/ocr_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_provider.dart';
 import '../utils/animation_utils.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/meter_card.dart';
@@ -24,8 +25,18 @@ import 'usage_screen.dart';
 final _pkr =
     NumberFormat.currency(locale: 'en_US', symbol: 'Rs', decimalDigits: 0);
 
+// Helpers used in dashboard
+double totalConsumptionKwh(List<MeterModel> meters) {
+  return meters.fold(0.0, (sum, m) => sum + m.monthlyUnitsKwh);
+}
+
+double totalEstimatedBillPkr(List<MeterModel> meters) {
+  return meters.fold(0.0, (sum, m) => sum + m.monthlyBillPkr);
+}
+
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final ThemeProvider? themeProvider;
+  const DashboardScreen({super.key, this.themeProvider});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -175,6 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onOpenProfile: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const ProfileScreen()),
         ),
+        themeProvider: widget.themeProvider,
       ),
       const UsageScreen(),
       const BillsScreen(),
@@ -208,11 +220,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 stream: MeterRepository.instance.watchMeters(),
                 builder: (context, snapshot) {
                   final meters = snapshot.data ?? [];
-                  return FloatingActionButton(
-                    onPressed: () => _quickScanMeter(context, meters),
-                    backgroundColor: AppColors.primary,
-                    child: const Icon(Icons.qr_code_scanner_rounded,
-                        color: Colors.white),
+                  return Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.blueGradient,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.5),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: FloatingActionButton(
+                      onPressed: () => _quickScanMeter(context, meters),
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      child: const Icon(Icons.qr_code_scanner_rounded,
+                          color: Colors.white, size: 26),
+                    ),
                   );
                 },
               )
@@ -233,6 +261,7 @@ class _DashboardHome extends StatelessWidget {
   final VoidCallback onViewBills;
   final Function(List<MeterModel>) onScanMeter;
   final VoidCallback onOpenProfile;
+  final ThemeProvider? themeProvider;
 
   const _DashboardHome({
     required this.onOpenMeter,
@@ -240,6 +269,7 @@ class _DashboardHome extends StatelessWidget {
     required this.onViewBills,
     required this.onScanMeter,
     required this.onOpenProfile,
+    this.themeProvider,
   });
 
   @override
@@ -268,6 +298,7 @@ class _DashboardHome extends StatelessWidget {
         final meters = snapshot.data ?? const <MeterModel>[];
         final loading = snapshot.connectionState == ConnectionState.waiting;
 
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return SafeArea(
           child: CustomScrollView(
             slivers: [
@@ -275,7 +306,7 @@ class _DashboardHome extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                   decoration: const BoxDecoration(
-                    gradient: AppColors.headerGradient,
+                    gradient: AppColors.brandGradient,
                     borderRadius: BorderRadius.vertical(
                       bottom: Radius.circular(30),
                     ),
@@ -306,16 +337,40 @@ class _DashboardHome extends StatelessWidget {
                           ),
                           Row(
                             children: [
+                              // Theme toggle
+                              if (themeProvider != null)
+                                GestureDetector(
+                                  onTap: themeProvider!.toggle,
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.15),
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      isDark
+                                          ? Icons.light_mode_rounded
+                                          : Icons.dark_mode_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
                               InkWell(
                                 onTap: onOpenProfile,
                                 borderRadius: BorderRadius.circular(22),
                                 child: CircleAvatar(
                                   radius: 20,
-                                  backgroundColor: const Color(0xFF3A5AC0),
+                                  backgroundColor: AppColors.primaryLight,
                                   child: Text(initials,
                                       style: const TextStyle(
                                           color: Colors.white,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w700,
                                           fontSize: 13)),
                                 ),
                               ),
