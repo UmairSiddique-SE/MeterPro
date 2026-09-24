@@ -1,4 +1,11 @@
-# MeterPro
+# MeterPro — Meter Unit Tracker & Electricity Bill App
+
+**MeterPro by Umair** is a meter unit tracker and electricity bill management app for tracking electricity meter readings, units, estimated bills, and meter history.
+
+**Search terms:** meter unit tracker · meter unit · meter app · meter tracker · electricity unit tracker · meter reading app · MeterPro by Umair · meter app by Umair
+
+**Official website:** https://meterpro-official.web.app/
+
 
 MeterPro is a Flutter application for electricity meter and bill management, with Firebase-backed authentication, OTP verification, cloud functions, and protected meter data.
 
