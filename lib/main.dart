@@ -93,11 +93,6 @@ class _AuthGate extends StatelessWidget {
 
         return FutureBuilder<bool>(
           future: AuthService.instance.isOtpVerified(),
-<<<<<<< HEAD
-          builder: (context, verified) => verified.data == true
-              ? DashboardScreen(themeProvider: themeProvider)
-              : const LoginScreen(),
-=======
           builder: (context, verified) {
             if (verified.connectionState == ConnectionState.waiting) {
               return const Scaffold(
@@ -105,10 +100,9 @@ class _AuthGate extends StatelessWidget {
               );
             }
             return verified.data == true
-                ? const DashboardScreen()
+                ? DashboardScreen(themeProvider: themeProvider)
                 : const LoginScreen();
           },
->>>>>>> 9e9dd51c17095555b70066c40a63708e8e4dda7a
         );
       },
     );

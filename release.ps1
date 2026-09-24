@@ -11,7 +11,9 @@ flutter pub get
 flutter build apk --release
 
 # Rename the APK to MeterPro.apk
-Rename-Item \"build\app\outputs\flutter-apk\app-release.apk\" \"MeterPro.apk\" -Force
+if (Test-Path "build\app\outputs\flutter-apk\app-release.apk") {
+    Rename-Item "build\app\outputs\flutter-apk\app-release.apk" "MeterPro.apk" -Force
+}
 
 Write-Host "`n[2/4] GitHub Release ban rahi hai..." -ForegroundColor Cyan
 # Purani release delete karna (agar koi error wali bani ho)
