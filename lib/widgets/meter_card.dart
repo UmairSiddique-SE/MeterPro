@@ -51,7 +51,8 @@ class MeterCard extends StatelessWidget {
                   ),
                 ),
                 meter.isActive
-                    ? const PulsingStatusDot(color: AppColors.accentGreen, size: 8)
+                    ? const PulsingStatusDot(
+                        color: AppColors.accentGreen, size: 8)
                     : Container(
                         width: 8,
                         height: 8,
@@ -70,6 +71,28 @@ class MeterCard extends StatelessWidget {
                   fontSize: 9,
                   letterSpacing: 0.3,
                   fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Read: ${meter.presentReadingKwh} kWh',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'Used: ${meter.consumedUnitsKwh} kWh',
+                  style: TextStyle(
+                    color: AppColors.accentGreen,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
             const Spacer(),
             Row(
@@ -174,7 +197,8 @@ class MeterCard extends StatelessWidget {
                         alignment: Alignment.centerLeft,
                         child: AnimatedNumberText(
                           value: meter.monthlyUnitsKwh,
-                          formatter: (v) => v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 1),
+                          formatter: (v) => v.toStringAsFixed(
+                              v.truncateToDouble() == v ? 0 : 1),
                           style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,

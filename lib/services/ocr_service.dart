@@ -43,7 +43,9 @@ class OCRScanResult {
   /// A bill is accepted only when its due/last date belongs to this month.
   bool get isForCurrentMonth {
     final date = billDate;
-    if (date == null) return false;
+    if (date == null) {
+      return false;
+    }
     final now = DateTime.now();
     return date.year == now.year && date.month == now.month;
   }
@@ -108,10 +110,18 @@ class OCRService {
     }
 
     double confidence = 0.0;
-    if (meterReading != null) confidence += 0.4;
-    if (referenceNo != null) confidence += 0.3;
-    if (meterNo != null) confidence += 0.2;
-    if (consumerName != null) confidence += 0.1;
+    if (meterReading != null) {
+      confidence += 0.4;
+    }
+    if (referenceNo != null) {
+      confidence += 0.3;
+    }
+    if (meterNo != null) {
+      confidence += 0.2;
+    }
+    if (consumerName != null) {
+      confidence += 0.1;
+    }
 
     return OCRScanResult(
       meterReading: meterReading,
@@ -162,7 +172,9 @@ class OCRService {
       'DEC': 12,
     };
     final parts = input.split(RegExp(r'\s+'));
-    if (parts.length < 2) return null;
+    if (parts.length < 2) {
+      return null;
+    }
     final month = months[parts[0].toUpperCase()];
     final year = int.tryParse(parts[1]);
     if (month != null && year != null) {
@@ -198,15 +210,21 @@ class OCRService {
   int? _extractMeterReading(List<String> lines, String fullText) {
     // Pass 1: Line with explicit kWh value (and NOT impulse rate!)
     for (final line in lines) {
-      if (_isImpulseLine(line)) continue;
+      if (_isImpulseLine(line)) {
+        continue;
+      }
       final reading = _extractKwhValue(line);
-      if (reading != null && !_isCommonSpecNumber(reading)) return reading;
+      if (reading != null && !_isCommonSpecNumber(reading)) {
+        return reading;
+      }
     }
 
     // Pass 2: Line with 'kWh' or 'k.w.h', check neighboring lines (up to 3 away)
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
-      if (_isImpulseLine(line)) continue;
+      if (_isImpulseLine(line)) {
+        continue;
+      }
       if (RegExp(r'\b(?:kwh|k\.w\.h|units?|reading|active\s*energy)\b',
               caseSensitive: false)
           .hasMatch(line)) {
@@ -220,24 +238,34 @@ class OCRService {
         int? bestVal;
         int bestLen = 0;
         for (int j = i - 3; j <= i + 3; j++) {
-          if (j < 0 || j >= lines.length || j == i) continue;
+          if (j < 0 || j >= lines.length || j == i) {
+            continue;
+          }
           final neighbor = lines[j];
-          if (_isImpulseLine(neighbor)) continue;
+          if (_isImpulseLine(neighbor)) {
+            continue;
+          }
           if (RegExp(r'(?:sr\.?\s*no|serial|p\.?o\.?\s*no|po\s*no|model|type)',
                   caseSensitive: false)
-              .hasMatch(neighbor)) continue;
+              .hasMatch(neighbor)) {
+            continue;
+          }
 
           final val = _extractDigitsFromSegment(neighbor);
           if (val == null ||
               !_isValidReadingRange(val) ||
-              _isCommonSpecNumber(val)) continue;
+              _isCommonSpecNumber(val)) {
+            continue;
+          }
           final len = _digitLength(val);
           if (len >= 3 && len > bestLen) {
             bestVal = val;
             bestLen = len;
           }
         }
-        if (bestVal != null) return bestVal;
+        if (bestVal != null) {
+          return bestVal;
+        }
       }
     }
 
@@ -245,16 +273,20 @@ class OCRService {
     // Filter out serial numbers, year, voltage, frequency, impulse, PO number
     final candidates = <int>[];
     for (final line in lines) {
-      if (_isImpulseLine(line)) continue;
+      if (_isImpulseLine(line)) {
+        continue;
+      }
       if (RegExp(
               r'(?:sr\.?\s*no|serial|p\.?o\.?\s*no|po\s*no|model|type|acc\.?cl|240v|50hz|warranty)',
               caseSensitive: false)
           .hasMatch(line)) {
         continue;
       }
-      final clean = _correctOcrDigitMisreads(line)
-          .replaceAll(RegExp(r'[^0-9.]'), '');
-      if (clean.isEmpty) continue;
+      final clean =
+          _correctOcrDigitMisreads(line).replaceAll(RegExp(r'[^0-9.]'), '');
+      if (clean.isEmpty) {
+        continue;
+      }
       final whole = clean.split('.').first;
       final val = int.tryParse(whole);
       if (val != null &&
@@ -269,8 +301,8 @@ class OCRService {
 
     if (candidates.isNotEmpty) {
       // Pick the longest number run (e.g. 130018 or 183041)
-      candidates.sort(
-          (a, b) => b.toString().length.compareTo(a.toString().length));
+      candidates
+          .sort((a, b) => b.toString().length.compareTo(a.toString().length));
       return candidates.first;
     }
 
@@ -284,23 +316,33 @@ class OCRService {
   }
 
   bool _isCommonSpecNumber(int num) {
-    if (num >= 2014 && num <= 2030) return true; // Years
-    if (num == 220 || num == 230 || num == 240 || num == 250) return true; // Voltage
-    if (num == 50 || num == 60) return true; // Hz
+    if (num >= 2014 && num <= 2030) {
+      return true; // Years
+    }
+    if (num == 220 || num == 230 || num == 240 || num == 250) {
+      return true; // Voltage
+    }
+    if (num == 50 || num == 60) {
+      return true; // Hz
+    }
     if (num == 1000 ||
         num == 1200 ||
         num == 1600 ||
         num == 2000 ||
         num == 2400 ||
         num == 3200 ||
-        num == 6400) return true; // Impulse constants
+        num == 6400) {
+      return true; // Impulse constants
+    }
     return false;
   }
 
   int _digitLength(int value) => value.abs().toString().length;
 
   int? _extractKwhValue(String line) {
-    if (_isImpulseLine(line)) return null;
+    if (_isImpulseLine(line)) {
+      return null;
+    }
 
     const digitChars = r'[0-9OoIiLlSsZzBb\s.,]{3,14}';
     final patterns = [
@@ -316,7 +358,9 @@ class OCRService {
     for (final pattern in patterns) {
       final match = pattern.firstMatch(line);
       final rawValue = match?.group(1);
-      if (rawValue == null) continue;
+      if (rawValue == null) {
+        continue;
+      }
       final normalized =
           _correctOcrDigitMisreads(rawValue).replaceAll(RegExp(r'\s+'), '');
       final wholeKwh = normalized.split(RegExp(r'[.,]')).first;
