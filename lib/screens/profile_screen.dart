@@ -390,6 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
+                    final formattedTime = reminderTime.format(ctx);
                     final settings = ReminderSettings(
                       enabled: true,
                       billReminders: billReminders,
@@ -398,12 +399,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       reminderTime: reminderTime,
                     );
                     await ReminderService.instance.saveSettings(settings);
-                    if (!mounted) return;
+                    if (!ctx.mounted) return;
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(ctx).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Reminders set for $frequency at ${reminderTime.format(ctx)}. Message: "Check reading"',
+                          'Reminders set for $frequency at $formattedTime. Message: "Check reading"',
                         ),
                       ),
                     );
