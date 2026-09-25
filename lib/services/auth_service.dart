@@ -37,8 +37,9 @@ class AuthService {
       password: password,
     );
     final user = credential.user;
-    if (user == null)
+    if (user == null) {
       throw StateError('Firebase did not return the newly created account.');
+    }
     return user;
   }
 
@@ -153,8 +154,9 @@ class AuthService {
     }
 
     final user = _auth.currentUser;
-    if (user == null)
+    if (user == null) {
       throw StateError('Please sign in before verifying your email.');
+    }
 
     final userRef = _firestore.collection('users').doc(user.uid);
     final verified = await _firestore.runTransaction<bool>((transaction) async {
