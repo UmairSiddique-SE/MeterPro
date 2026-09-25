@@ -13,6 +13,7 @@ class OtpVerificationScreen extends StatefulWidget {
     required this.email,
     this.name,
     this.phoneNumber,
+    // sendInitialCode: true only for brand new signups (first-ever code)
     this.sendInitialCode = false,
   });
 
@@ -30,7 +31,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final _codeFocusNodes = List.generate(6, (_) => FocusNode());
   bool _loading = false;
   bool _codeInvalid = false;
-  bool _codeSent = false; // true once a code has been successfully sent/confirmed
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
 
@@ -38,27 +38,26 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void initState() {
     super.initState();
     if (widget.sendInitialCode) {
+      // Only for brand-new signup — send first code automatically
       WidgetsBinding.instance.addPostFrameCallback((_) => _sendCode(isInitial: true));
-    } else {
-      // Already have a code (came from login flow) — mark as sent
-      _codeSent = true;
-      _startCooldown(60);
     }
+    // For all other cases: cooldown = 0, "Send Code" button is immediately visible
+    // No auto-send, no auto-verify — user is in full control
   }
 
   @override
   void dispose() {
     _cooldownTimer?.cancel();
-    for (final controller in _codeControllers) {
-      controller.dispose();
+    for (final c in _codeControllers) {
+      c.dispose();
     }
-    for (final focusNode in _codeFocusNodes) {
-      focusNode.dispose();
+    for (final f in _codeFocusNodes) {
+      f.dispose();
     }
     super.dispose();
   }
 
-  void _startCooldown([int seconds = 60]) {
+  void _startCooldown([int seconds = 45]) {
     _cooldownTimer?.cancel();
     setState(() => _cooldownSeconds = seconds);
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -71,10 +70,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
+  // ── VERIFY: only called when user taps "Verify & Continue" button ─────────
   Future<void> _verify() async {
-    final code = _codeControllers.map((controller) => controller.text.trim()).join();
+    final code = _codeControllers.map((c) => c.text.trim()).join();
     if (code.length != 6) {
-      _show('Please enter the complete 6-digit code.');
+      _show('Please enter all 6 digits of your verification code.');
       return;
     }
 
@@ -82,6 +82,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     try {
       await AuthService.instance.verifyOtp(code);
 
+      // Save profile — uses merge:true so old data is NEVER deleted
       final user = AuthService.instance.currentUser;
       if (user != null) {
         await AuthService.instance.saveProfile(
@@ -95,7 +96,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       await _showSuccessDialog();
       if (!mounted) return;
-      // Pop everything — _AuthGate will see isOtpVerified()==true and show Dashboard
+      // Pop back to _AuthGate which will detect isVerified=true and open Dashboard
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (error) {
       _clearCode(markInvalid: true);
@@ -108,6 +109,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
   }
 
+  // ── SEND CODE: only called when user taps "Send Code" / "Resend Code" ─────
   Future<void> _sendCode({bool isInitial = false}) async {
     if (!mounted) return;
     setState(() => _loading = true);
@@ -119,23 +121,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       _clearCode();
       _startCooldown(45);
-      // Mark that a valid code exists (sent now or already in inbox)
-      setState(() => _codeSent = true);
-      if (!isInitial) {
-        _show('New code sent to ${widget.email}');
-      } else {
-        _show('Verification code sent to ${widget.email}');
-      }
+      _show(isInitial
+          ? 'Code sent to ${widget.email}. Check your inbox.'
+          : 'New code sent to ${widget.email}. Check your inbox.');
     } catch (error) {
-      // Show error for both initial and resend
       if (mounted) _show(_messageFor(error));
-      _startCooldown(30);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _openGmailInbox() async {
+  // ── GMAIL ─────────────────────────────────────────────────────────────────
+  Future<void> _openGmail() async {
     final gmailApp = Uri.parse('googlegmail://');
     final gmailWeb = Uri.parse('https://mail.google.com/mail/u/0/#inbox');
     try {
@@ -145,10 +142,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       }
       await launchUrl(gmailWeb, mode: LaunchMode.externalApplication);
     } catch (_) {
-      _show('Could not open Gmail. Please open your mail client manually.');
+      _show('Could not open Gmail. Please open your mail app manually.');
     }
   }
 
+  // ── HELPERS ───────────────────────────────────────────────────────────────
   void _show(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).removeCurrentSnackBar();
@@ -156,55 +154,68 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         SnackBar(
           content: Text(message),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 5),
         ),
       );
     }
   }
 
   void _clearCode({bool markInvalid = false}) {
-    for (final controller in _codeControllers) {
-      controller.clear();
+    for (final c in _codeControllers) {
+      c.clear();
     }
     if (mounted) {
       setState(() => _codeInvalid = markInvalid);
-      _codeFocusNodes.first.requestFocus();
+      if (_codeFocusNodes.isNotEmpty) _codeFocusNodes.first.requestFocus();
     }
   }
 
+  // Digit input — NO auto-verify, user must tap the button
   void _onDigitChanged(int index, String value) {
-    if (_codeInvalid) {
-      setState(() => _codeInvalid = false);
-    }
+    if (_codeInvalid) setState(() => _codeInvalid = false);
 
-    // Handle full OTP paste (e.g. user pasted 6 digits into any box)
+    // Handle paste (6 digits at once)
     if (value.length > 1) {
       final digits = value.replaceAll(RegExp(r'\D'), '');
       if (digits.isNotEmpty) {
         for (int i = 0; i < 6; i++) {
-          if (i < digits.length) {
-            _codeControllers[i].text = digits[i];
-          }
+          _codeControllers[i].text = i < digits.length ? digits[i] : '';
         }
-        final targetIndex = (digits.length >= 6) ? 5 : digits.length;
-        _codeFocusNodes[targetIndex].requestFocus();
-        // Only auto-verify if we know a code was actually sent
-        if (digits.length >= 6 && _codeSent) {
-          _verify();
-        }
+        final target = (digits.length >= 6) ? 5 : digits.length;
+        _codeFocusNodes[target].requestFocus();
+        // NO auto-verify here — user taps the button themselves
         return;
       }
     }
 
-    if (value.isNotEmpty) {
-      if (index < 5) {
-        _codeFocusNodes[index + 1].requestFocus();
-      } else {
-        // Last digit filled, dismiss keyboard and auto-verify
-        FocusScope.of(context).unfocus();
-        _verify();
-      }
+    // Move focus forward, but never auto-verify
+    if (value.isNotEmpty && index < 5) {
+      _codeFocusNodes[index + 1].requestFocus();
     }
+  }
+
+  String _messageFor(Object error) {
+    if (error is FirebaseException) {
+      return error.message ?? 'Connection issue. Please check your network.';
+    }
+    if (error is StateError) {
+      return error.message;
+    }
+    final msg = error.toString().toLowerCase();
+    if (msg.contains('socket') || msg.contains('network') ||
+        msg.contains('timeout') || msg.contains('client')) {
+      return 'No internet connection. Please check your network and try again.';
+    }
+    if (msg.contains('expired')) {
+      return 'Code has expired. Please tap "Send Code" to get a new one.';
+    }
+    if (msg.contains('invalid') || msg.contains('wrong') || msg.contains('incorrect')) {
+      return 'Invalid code. Please check your email and try again.';
+    }
+    if (msg.contains('wait') || msg.contains('cooldown')) {
+      return error.toString();
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   Future<void> _showSuccessDialog() {
@@ -212,9 +223,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
-          backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -224,29 +234,29 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.15),
+                  color: Colors.green.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check_circle_rounded,
                     color: Colors.green, size: 48),
               ),
               const SizedBox(height: 20),
-              Text(
-                'Verification Successful!',
+              const Text(
+                'Verified!',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  color: AppColors.lightTextPrimary,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text(
-                'Your email address has been verified successfully.',
+              const Text(
+                'Your email has been verified successfully.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  color: AppColors.lightTextSecondary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -258,10 +268,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                   child: const Text('Continue to Dashboard',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -271,32 +283,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 
-  String _messageFor(Object error) {
-    if (error is FirebaseException) {
-      return error.message ?? 'Database connection issue. Please check your network and try again.';
-    }
-    if (error is StateError) {
-      return error.message;
-    }
-    final message = error.toString().toLowerCase();
-    if (message.contains('socketexception') ||
-        message.contains('clientexception') ||
-        message.contains('timeoutexception') ||
-        message.contains('network')) {
-      return 'Internet connection issue. Please check your network connection.';
-    }
-    if (message.contains('expired')) {
-      return 'Verification code has expired. Please tap "Resend Code" for a new code.';
-    }
-    if (message.contains('invalid') || message.contains('wrong') || message.contains('incorrect')) {
-      return 'Invalid verification code. Please check your latest email or tap Resend Code.';
-    }
-    return 'Invalid code or verification failed. Please check your latest email or tap Resend Code.';
-  }
-
+  // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool codeSentOrSending = _cooldownSeconds > 0;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
@@ -305,7 +296,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+        foregroundColor:
+            isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -313,15 +305,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           child: Column(
             children: [
               const SizedBox(height: 8),
-              // Shield Icon
+
+              // Icon
               Container(
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.25),
+                    color: AppColors.primary.withValues(alpha: 0.22),
                     width: 2,
                   ),
                 ),
@@ -329,38 +322,53 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     size: 40, color: AppColors.primary),
               ),
               const SizedBox(height: 24),
+
               Text(
-                'Enter Verification Code',
+                'Email Verification',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.lightTextPrimary,
                     ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
+
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
                   style: TextStyle(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.lightTextSecondary,
                     fontSize: 14,
                     height: 1.5,
                   ),
                   children: [
-                    const TextSpan(text: 'We sent a 6-digit security code to\n'),
+                    const TextSpan(text: 'Tap '),
+                    TextSpan(
+                      text: codeSentOrSending ? '"Resend Code"' : '"Send Code"',
+                      style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const TextSpan(text: ' to receive your 6-digit code at\n'),
                     TextSpan(
                       text: widget.email,
                       style: TextStyle(
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.lightTextPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 32),
 
-              // 6 OTP Digit Inputs
+              // ── 6 OTP Boxes ──────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) {
@@ -371,7 +379,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       focusNode: FocusNode(),
                       onKeyEvent: (event) {
                         if (event is KeyDownEvent &&
-                            event.logicalKey == LogicalKeyboardKey.backspace &&
+                            event.logicalKey ==
+                                LogicalKeyboardKey.backspace &&
                             _codeControllers[index].text.isEmpty &&
                             index > 0) {
                           _codeFocusNodes[index - 1].requestFocus();
@@ -380,7 +389,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       child: TextField(
                         controller: _codeControllers[index],
                         focusNode: _codeFocusNodes[index],
-                        autofocus: index == 0,
+                        autofocus: false, // no autofocus, no autofill triggers
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
                         inputFormatters: [
@@ -389,26 +398,35 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                          color: isDark
+                              ? Colors.white
+                              : AppColors.lightTextPrimary,
                         ),
                         decoration: InputDecoration(
                           counterText: '',
                           filled: true,
-                          fillColor: isDark ? AppColors.darkSurface : Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          fillColor: isDark
+                              ? AppColors.darkSurface
+                              : Colors.white,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 14),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(
                               color: _codeInvalid
                                   ? Colors.red
-                                  : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                                  : (isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.lightBorder),
                               width: 1.2,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(
-                              color: _codeInvalid ? Colors.red : AppColors.primary,
+                              color: _codeInvalid
+                                  ? Colors.red
+                                  : AppColors.primary,
                               width: 2,
                             ),
                           ),
@@ -419,14 +437,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   );
                 }),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 28),
 
+              // ── Buttons ───────────────────────────────────────────────────
               if (_loading)
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: 16),
                   child: CircularProgressIndicator(),
                 )
               else ...[
+                // VERIFY button
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -435,83 +455,96 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                       elevation: 4,
                     ),
                     child: const Text(
                       'Verify & Continue',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+
+                // SEND CODE / RESEND CODE button
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: _cooldownSeconds > 0 ? null : () => _sendCode(),
+                    icon: Icon(
+                      _cooldownSeconds > 0
+                          ? Icons.timer_outlined
+                          : Icons.send_rounded,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _cooldownSeconds > 0
+                          ? 'Resend in ${_cooldownSeconds}s'
+                          : (codeSentOrSending ? 'Resend Code' : 'Send Code'),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      side: BorderSide(
+                        color: _cooldownSeconds > 0
+                            ? (isDark
+                                ? AppColors.darkBorder
+                                : AppColors.lightBorder)
+                            : AppColors.primary,
+                        width: 1.5,
+                      ),
+                      foregroundColor: _cooldownSeconds > 0
+                          ? (isDark
+                              ? AppColors.darkTextMuted
+                              : AppColors.lightTextMuted)
+                          : AppColors.primary,
+                      textStyle: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Open Gmail button
                 SizedBox(
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton.icon(
-                    onPressed: _openGmailInbox,
-                    icon: const Icon(Icons.mail_outline_rounded, size: 20),
+                    onPressed: _openGmail,
+                    icon: const Icon(Icons.mail_outline_rounded, size: 18),
                     label: const Text('Open Gmail Inbox'),
                     style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                       side: BorderSide(
-                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                        color: isDark
+                            ? AppColors.darkBorder
+                            : AppColors.lightBorder,
                       ),
+                      foregroundColor: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextSecondary,
+                      textStyle: const TextStyle(fontSize: 14),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Resend Section with Countdown Timer
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Didn't receive the code? ",
-                      style: TextStyle(
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (_cooldownSeconds > 0)
-                      Text(
-                        'Resend in ${_cooldownSeconds}s',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      )
-                    else
-                      GestureDetector(
-                        onTap: () => _sendCode(),
-                        child: const Text(
-                          'Resend Code',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
               ],
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
-              // Helpful Tip Card
+              // Tip card
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.amber.withValues(alpha: 0.1)
+                      ? Colors.amber.withValues(alpha: 0.08)
                       : const Color(0xFFFFFBEB),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: Colors.amber.withValues(alpha: 0.3),
-                    width: 1,
                   ),
                 ),
                 child: Row(
@@ -521,10 +554,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Tip: If the email doesn\'t arrive in 1-2 minutes, check your Spam or Promotions folder.',
+                        'Tap "Send Code" first, then check your email inbox (or Spam folder) for the 6-digit code.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.amber.shade200 : const Color(0xFF92400E),
+                          color: isDark
+                              ? Colors.amber.shade200
+                              : const Color(0xFF92400E),
                           height: 1.4,
                         ),
                       ),

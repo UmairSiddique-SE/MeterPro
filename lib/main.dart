@@ -102,10 +102,10 @@ class _AuthGate extends StatelessWidget {
               return DashboardScreen(themeProvider: themeProvider);
             }
             // Logged in but NOT verified — show OTP screen
-            // sendInitialCode: true so a fresh code is sent automatically
+            // sendInitialCode: false → user manually taps Send Code
             return OtpVerificationScreen(
               email: user.email ?? '',
-              sendInitialCode: true,
+              sendInitialCode: false,
             );
           },
         );
