@@ -57,7 +57,8 @@ class ReminderService {
     if (_initialized) return;
     tz.initializeTimeZones();
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -72,7 +73,8 @@ class ReminderService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefKey);
     if (raw == null) {
-      return const ReminderSettings(reminderTime: TimeOfDay(hour: 9, minute: 0));
+      return const ReminderSettings(
+          reminderTime: TimeOfDay(hour: 9, minute: 0));
     }
 
     try {
@@ -90,7 +92,8 @@ class ReminderService {
       );
       return ReminderSettings.fromMap(decoded);
     } catch (_) {
-      return const ReminderSettings(reminderTime: TimeOfDay(hour: 9, minute: 0));
+      return const ReminderSettings(
+          reminderTime: TimeOfDay(hour: 9, minute: 0));
     }
   }
 
@@ -149,10 +152,9 @@ class ReminderService {
       scheduled,
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents:
-          settings.frequency == 'Weekly'
-              ? DateTimeComponents.dayOfWeekAndTime
-              : DateTimeComponents.time,
+      matchDateTimeComponents: settings.frequency == 'Weekly'
+          ? DateTimeComponents.dayOfWeekAndTime
+          : DateTimeComponents.time,
       payload: 'meterpro_reminder',
     );
   }
