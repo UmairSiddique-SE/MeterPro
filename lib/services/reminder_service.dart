@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -22,13 +22,13 @@ class ReminderSettings {
   });
 
   Map<String, dynamic> toMap() => {
-        'enabled': enabled,
-        'billReminders': billReminders,
-        'highUsageAlert': highUsageAlert,
-        'frequency': frequency,
-        'hour': reminderTime.hour,
-        'minute': reminderTime.minute,
-      };
+    'enabled': enabled,
+    'billReminders': billReminders,
+    'highUsageAlert': highUsageAlert,
+    'frequency': frequency,
+    'hour': reminderTime.hour,
+    'minute': reminderTime.minute,
+  };
 
   factory ReminderSettings.fromMap(Map<String, dynamic> map) {
     final hour = map['hour'] as int? ?? 9;
@@ -57,8 +57,9 @@ class ReminderService {
     if (_initialized) return;
     tz.initializeTimeZones();
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings();
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -74,32 +75,28 @@ class ReminderService {
     final raw = prefs.getString(_prefKey);
     if (raw == null) {
       return const ReminderSettings(
-          reminderTime: TimeOfDay(hour: 9, minute: 0));
+        reminderTime: TimeOfDay(hour: 9, minute: 0),
+      );
     }
 
     try {
-      final decoded = Map<String, dynamic>.from(
-        (Map<String, dynamic>.from(
-          <String, Object?>{
-            'enabled': true,
-            'billReminders': true,
-            'highUsageAlert': true,
-            'frequency': 'Daily',
-            'hour': 9,
-            'minute': 0,
-          },
-        )),
-      );
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        return const ReminderSettings(
+          reminderTime: TimeOfDay(hour: 9, minute: 0),
+        );
+      }
       return ReminderSettings.fromMap(decoded);
     } catch (_) {
       return const ReminderSettings(
-          reminderTime: TimeOfDay(hour: 9, minute: 0));
+        reminderTime: TimeOfDay(hour: 9, minute: 0),
+      );
     }
   }
 
   Future<void> saveSettings(ReminderSettings settings) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey, settings.toMap().toString());
+    await prefs.setString(_prefKey, jsonEncode(settings.toMap()));
     await scheduleReminder(settings);
   }
 

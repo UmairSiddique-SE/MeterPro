@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/reminder_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
@@ -248,11 +249,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showNotificationSettings() {
-    bool billReminders = true;
-    bool highUsage = true;
-    String frequency = 'Daily';
-    TimeOfDay reminderTime = const TimeOfDay(hour: 9, minute: 0);
+  void _showNotificationSettings() async {
+    final savedSettings = await ReminderService.instance.loadSettings();
+    bool billReminders = savedSettings.billReminders;
+    bool highUsage = savedSettings.highUsageAlert;
+    String frequency = savedSettings.frequency;
+    TimeOfDay reminderTime = savedSettings.reminderTime;
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -281,7 +285,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
 
               const Text('REMINDER SETTINGS',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1)),
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMuted,
+                      letterSpacing: 1)),
               const SizedBox(height: 12),
 
               // Frequency Selector
@@ -299,14 +307,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: selected ? AppColors.primary : Colors.transparent,
+                            color: selected
+                                ? AppColors.primary
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           alignment: Alignment.center,
                           child: Text(
                             f,
                             style: TextStyle(
-                              color: selected ? Colors.white : AppColors.textSecondary,
+                              color: selected
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -323,28 +335,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                 tileColor: AppColors.background,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                leading: const Icon(Icons.access_time_rounded, color: AppColors.primary),
-                title: const Text('Reminder Time', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                leading: const Icon(Icons.access_time_rounded,
+                    color: AppColors.primary),
+                title: const Text('Reminder Time',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                 trailing: Text(
                   reminderTime.format(ctx),
-                  style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                      fontSize: 16),
                 ),
                 onTap: () async {
-                  final picked = await showTimePicker(context: ctx, initialTime: reminderTime);
+                  final picked = await showTimePicker(
+                      context: ctx, initialTime: reminderTime);
                   if (picked != null) setMState(() => reminderTime = picked);
                 },
               ),
               const SizedBox(height: 24),
 
               const Text('SYSTEM ALERTS',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1)),
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMuted,
+                      letterSpacing: 1)),
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Bill Reminders',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                subtitle: const Text('Get notified when your bill is estimated.',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: const Text(
+                    'Get notified when your bill is estimated.',
                     style: TextStyle(fontSize: 11)),
                 value: billReminders,
                 onChanged: (v) => setMState(() => billReminders = v),
@@ -352,7 +378,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('High Usage Alert',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 subtitle: const Text('Notify if daily units exceed 20 kWh.',
                     style: TextStyle(fontSize: 11)),
                 value: highUsage,
@@ -362,10 +389,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    final settings = ReminderSettings(
+                      enabled: true,
+                      billReminders: billReminders,
+                      highUsageAlert: highUsage,
+                      frequency: frequency,
+                      reminderTime: reminderTime,
+                    );
+                    await ReminderService.instance.saveSettings(settings);
+                    if (!mounted) return;
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Reminders set for $frequency at ${reminderTime.format(context)}. Message: "Check reading"')),
+                      SnackBar(
+                        content: Text(
+                          'Reminders set for $frequency at ${reminderTime.format(context)}. Message: "Check reading"',
+                        ),
+                      ),
                     );
                   },
                   child: const Text('Save Notification Settings'),

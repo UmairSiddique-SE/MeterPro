@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/meter.dart';
@@ -16,10 +15,12 @@ class MeterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final recentLogs = meter.readingHistory.reversed.take(5).toList();
+
     return ScaleTap(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -43,7 +44,7 @@ class MeterCard extends StatelessWidget {
                   child: Text(
                     meter.name,
                     style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary),
                     maxLines: 1,
@@ -72,117 +73,80 @@ class MeterCard extends StatelessWidget {
                   letterSpacing: 0.3,
                   fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Read: ${meter.presentReadingKwh} kWh',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  'Used: ${meter.consumedUnitsKwh} kWh',
-                  style: TextStyle(
-                    color: AppColors.accentGreen,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Weekly Trend',
-                  style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textMuted),
-                ),
-                if (meter.readingHistory.isNotEmpty)
-                  Text(
-                    'Last: ${DateFormat('hh:mm a').format(meter.readingHistory.last.timestamp)}',
-                    style: const TextStyle(
-                        fontSize: 8, color: AppColors.textMuted),
-                  ),
-              ],
-            ),
             const SizedBox(height: 6),
-            SizedBox(
-              height: 42,
-              child: BarChart(
-                BarChartData(
-                  gridData: const FlGridData(show: false),
-                  titlesData: const FlTitlesData(show: false),
-                  borderData: FlBorderData(show: false),
-                  barTouchData: BarTouchData(
-                    enabled: true,
-                    touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => AppColors.primary,
-                      tooltipPadding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      tooltipBorderRadius: BorderRadius.circular(8),
-                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                        return BarTooltipItem(
-                          '${rod.toY.toInt()} kWh',
-                          const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold),
+            const Text(
+              'Last 5 Readings',
+              style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: recentLogs.isEmpty
+                  ? const Center(
+                      child: Text('No readings yet',
+                          style: TextStyle(fontSize: 9, color: AppColors.textMuted)),
+                    )
+                  : ListView.builder(
+                      physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: recentLogs.length,
+                      itemBuilder: (context, index) {
+                        final log = recentLogs[index];
+                        final isLatest = index == 0;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isLatest
+                                ? AppColors.primary.withValues(alpha: 0.08)
+                                : Colors.grey.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(6),
+                            border: isLatest
+                                ? Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1)
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  if (isLatest) ...[
+                                    Container(
+                                      width: 4,
+                                      height: 4,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.accentGreen,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 3),
+                                  ],
+                                  Text(
+                                    DateFormat('dd MMM, hh:mm a').format(log.timestamp),
+                                    style: TextStyle(
+                                      fontSize: 7.5,
+                                      fontWeight: isLatest ? FontWeight.bold : FontWeight.w500,
+                                      color: isLatest ? AppColors.primary : AppColors.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                '${log.readingKwh} kWh',
+                                style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: isLatest ? FontWeight.w900 : FontWeight.w700,
+                                    color: isLatest ? AppColors.primary : AppColors.textPrimary),
+                              ),
+                            ],
+                          ),
                         );
                       },
                     ),
-                  ),
-                  barGroups: [
-                    if (meter.dailyUsage.isEmpty)
-                      for (int i = 0; i < 7; i++)
-                        BarChartGroupData(x: i, barRods: [
-                          BarChartRodData(
-                            toY: 0,
-                            width: 6,
-                            borderRadius: BorderRadius.circular(10),
-                            backDrawRodData: BackgroundBarChartRodData(
-                                show: true,
-                                toY: 10,
-                                color: const Color(0xCCF4F6FB)),
-                          )
-                        ])
-                    else
-                      for (int i = 0; i < meter.dailyUsage.take(7).length; i++)
-                        BarChartGroupData(x: i, barRods: [
-                          BarChartRodData(
-                            toY: meter.dailyUsage[i].kwh,
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.primaryLight,
-                                AppColors.primary.withValues(alpha: 0.8)
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                            width: 6,
-                            borderRadius: BorderRadius.circular(10),
-                            backDrawRodData: BackgroundBarChartRodData(
-                              show: true,
-                              toY: (meter.dailyUsage
-                                      .map((e) => e.kwh)
-                                      .fold(1.0, (a, b) => a > b ? a : b)) *
-                                  1.2,
-                              color: const Color(0xCCF4F6FB),
-                            ),
-                          ),
-                        ]),
-                  ],
-                ),
-              ),
             ),
-            const Spacer(),
+            const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -200,7 +164,7 @@ class MeterCard extends StatelessWidget {
                           formatter: (v) => v.toStringAsFixed(
                               v.truncateToDouble() == v ? 0 : 1),
                           style: const TextStyle(
-                              fontSize: 22,
+                              fontSize: 20,
                               fontWeight: FontWeight.w900,
                               height: 1,
                               color: AppColors.textPrimary),
@@ -229,7 +193,7 @@ class MeterCard extends StatelessWidget {
                         child: Text(
                           _pkr.format(meter.monthlyBillPkr),
                           style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w800,
                               color: AppColors.accentOrange),
                         ),
