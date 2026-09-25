@@ -1,32 +1,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public, read-only metadata used to notify users about new app releases.
     match /app_config/{platform} {
       allow read: if true;
       allow write: if false;
     }
 
-    function verifiedUser() {
-      return request.auth != null
-        && request.auth.token.emailOtpVerified == true;
+    function owner() {
+      return request.auth != null && request.auth.uid == userId;
     }
 
-    // Profile data is available only after server-side OTP verification.
-    // The verification claim is issued by Cloud Functions, not the client.
     match /users/{userId} {
-      allow read, write: if verifiedUser() && request.auth.uid == userId;
-    }
-
-    // Each verified user can only read/write their own meters.
-    match /users/{userId}/meters/{meterId} {
-      allow read, write: if verifiedUser() && request.auth.uid == userId;
-    }
-
-    // OTP records contain hashed codes and are server-only. Cloud Functions
-    // use the Admin SDK, which bypasses Firestore security rules.
-    match /emailOtps/{userId} {
-      allow read, write: if false;
+      allow read, write: if owner();
+      match /{allChildren=**} {
+        allow read, write: if owner();
+      }
     }
   }
 }
