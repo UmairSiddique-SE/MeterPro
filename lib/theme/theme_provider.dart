@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Global theme state — call ThemeProvider.of(context).toggle() to switch modes.
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _mode = ThemeMode.dark; // default: dark
+  ThemeMode _mode = ThemeMode.light; // default: light
 
   ThemeMode get mode => _mode;
   bool get isDark => _mode == ThemeMode.dark;
@@ -27,7 +27,9 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   static ThemeProvider of(BuildContext context) {
-    return context.findAncestorStateOfType<_ThemeProviderWidgetState>()!.provider;
+    return context
+        .findAncestorStateOfType<_ThemeProviderWidgetState>()!
+        .provider;
   }
 }
 
