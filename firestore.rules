@@ -7,24 +7,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    function verifiedUser() {
-      return request.auth != null
-        && request.auth.token.emailOtpVerified == true;
-    }
-
+    // Authenticated users can read and manage their own profile and data
     match /users/{userId} {
-      allow read, write: if verifiedUser() && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /{allChildren=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    // Each verified user can only read/write their own meters.
-    match /users/{userId}/meters/{meterId} {
-      allow read, write: if verifiedUser() && request.auth.uid == userId;
-    }
-
-    // OTP records are server-only. The Cloud Function uses Admin SDK, which
-    // bypasses Firestore security rules.
+    // OTP records
     match /emailOtps/{userId} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
