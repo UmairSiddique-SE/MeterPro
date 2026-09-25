@@ -268,8 +268,13 @@ class AuthService {
   Future<void> signOut() => _auth.signOut();
 
   static String _envOrDefault(String key, String fallback) {
-    final value = dotenv.env[key]?.trim();
-    return value == null || value.isEmpty ? fallback : value;
+    try {
+      if (!dotenv.isInitialized) return fallback;
+      final value = dotenv.env[key]?.trim();
+      return value == null || value.isEmpty ? fallback : value;
+    } catch (_) {
+      return fallback;
+    }
   }
 
   static String messageFor(FirebaseAuthException e) {
