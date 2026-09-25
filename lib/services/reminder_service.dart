@@ -148,6 +148,7 @@ class ReminderService {
           : 'Time to check your meter reading.',
       scheduled,
       details,
+      UILocalNotificationDateInterpretation.absoluteTime,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: settings.frequency == 'Weekly'
           ? DateTimeComponents.dayOfWeekAndTime
