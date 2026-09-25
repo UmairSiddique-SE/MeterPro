@@ -123,7 +123,7 @@ class ReminderService {
       );
     }
 
-    final androidDetails = AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       'meterpro_reminders',
       'MeterPro Reminders',
       channelDescription: 'Daily and weekly meter reading reminders.',

@@ -400,10 +400,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     await ReminderService.instance.saveSettings(settings);
                     if (!mounted) return;
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(ctx).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Reminders set for $frequency at ${reminderTime.format(context)}. Message: "Check reading"',
+                          'Reminders set for $frequency at ${reminderTime.format(ctx)}. Message: "Check reading"',
                         ),
                       ),
                     );
