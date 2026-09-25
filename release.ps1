@@ -1,43 +1,42 @@
 param([string]$version)
 
 if (-not $version) {
-    Write-Host "Sahi tareeka: .\release.ps1 -version 1.0.1" -ForegroundColor Red
-    exit
+    Write-Host "Sahi tareeka: .\release.ps1 -version 1.0.3" -ForegroundColor Red
+    exit 1
 }
 
-Write-Host "`n[1/4] APK build ho rahi hai..." -ForegroundColor Cyan
+$tag = "v$version"
+
+Write-Host "[1/4] APK release build..." -ForegroundColor Cyan
 flutter clean
 flutter pub get
+flutter analyze
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+flutter test
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 flutter build apk --release
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-# Rename the APK to MeterPro.apk
-if (Test-Path "build\app\outputs\flutter-apk\app-release.apk") {
-    Rename-Item "build\app\outputs\flutter-apk\app-release.apk" "MeterPro.apk" -Force
-}
-
-Write-Host "`n[2/4] GitHub Release ban rahi hai..." -ForegroundColor Cyan
-# Purani release delete karna (agar koi error wali bani ho)
-gh release delete "v$version" --yes --cleanup-tag 2>$null
-
-# Nayi release banana aur APK attach karna
-gh release create "v$version" "build\app\outputs\flutter-apk\MeterPro.apk" --title "MeterPro v$version" --notes "Update v$version"
-
-$apkUrl = "https://github.com/UmairSiddique-SE/MeterPro/releases/download/v$version/MeterPro.apk"
-
-Write-Host "`n[3/4] Code GitHub par push ho raha hai..." -ForegroundColor Cyan
+Write-Host "[2/4] Git commit + tag push..." -ForegroundColor Cyan
 git add .
-git commit -m "Release v$version"
+git commit -m "Release $tag"
+if ($LASTEXITCODE -ne 0) { Write-Host "No new changes to commit; continuing..." -ForegroundColor Yellow }
 git push
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+git tag $tag
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+git push origin $tag
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "`n[4/4] Website deploy ho rahi hai..." -ForegroundColor Cyan
+Write-Host "[3/4] GitHub Actions release..." -ForegroundColor Cyan
+Write-Host "Tag $tag pushed. GitHub Actions will build and attach MeterPro.apk automatically." -ForegroundColor Green
+Write-Host "Release URL: https://github.com/UmairSiddique-SE/MeterPro/releases/tag/$tag" -ForegroundColor Yellow
+
+Write-Host "[4/4] Firebase Hosting deploy..." -ForegroundColor Cyan
 firebase deploy --only hosting
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "`n=========================================" -ForegroundColor Green
-Write-Host "DONE! Ab sirf yeh 1 kaam manually karein:" -ForegroundColor Green
-Write-Host "=========================================" -ForegroundColor Green
-Write-Host "Firebase Console -> Firestore -> app_config -> android document mein:"
-Write-Host "  version      = $version"
-Write-Host "  apkUrl       = $apkUrl"
-Write-Host ""
-Write-Host "Naya APK link (copy kar lein):" -ForegroundColor Yellow
-Write-Host $apkUrl
+$apkUrl = "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk"
+Write-Host "Release workflow started successfully." -ForegroundColor Green
+Write-Host "Website APK URL: $apkUrl" -ForegroundColor Yellow
+Write-Host "GitHub Actions may take a few minutes to publish the APK." -ForegroundColor Cyan
