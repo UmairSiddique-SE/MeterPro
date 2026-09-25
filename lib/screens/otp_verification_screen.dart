@@ -290,7 +290,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool codeSentOrSending = _cooldownSeconds > 0;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
@@ -349,14 +348,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     height: 1.5,
                   ),
                   children: [
-                    const TextSpan(text: 'Tap '),
-                    TextSpan(
-                      text: codeSentOrSending ? '"Resend Code"' : '"Send Code"',
-                      style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const TextSpan(text: ' to receive your 6-digit code at\n'),
+                    const TextSpan(text: 'A 6-digit code has been sent to\n'),
                     TextSpan(
                       text: widget.email,
                       style: TextStyle(
@@ -485,8 +477,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     ),
                     label: Text(
                       _cooldownSeconds > 0
-                          ? 'Resend in ${_cooldownSeconds}s'
-                          : (codeSentOrSending ? 'Resend Code' : 'Send Code'),
+                          ? 'Resend Code in ${_cooldownSeconds}s'
+                          : 'Resend Code',
                     ),
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -557,7 +549,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Tap "Send Code" first, then check your email inbox (or Spam folder) for the 6-digit code.',
+                        'Check your email inbox (or Spam folder) for the 6-digit code. Tap "Resend Code" if you didn\'t receive it.',
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark
