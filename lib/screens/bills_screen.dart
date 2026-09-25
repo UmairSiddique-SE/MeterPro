@@ -65,31 +65,6 @@ class BillsScreen extends StatelessWidget {
     }
   }
 
-
-
-  Widget _billDetailRow(String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-              child: Text(label,
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 12))),
-          const SizedBox(width: 12),
-          Flexible(
-              child: Text(value,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                      color: valueColor ?? AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700))),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,8 +140,8 @@ class BillsScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         'Due by ${DateFormat('dd MMM yyyy').format(DateTime.now().add(const Duration(days: 15)))} • ${meters.length} meters',
-                        style:
-                            const TextStyle(color: Colors.white70, fontSize: 11),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11),
                       ),
                       const SizedBox(height: 20),
                       SizedBox(
@@ -176,11 +151,13 @@ class BillsScreen extends StatelessWidget {
                           onPressed: meters.length == 1
                               ? () => _scanBill(context, meters.first)
                               : null,
-                          icon: const Icon(Icons.document_scanner_outlined, size: 18),
+                          icon: const Icon(Icons.document_scanner_outlined,
+                              size: 18),
                           label: const Text('Scan Latest Bill'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white60, width: 1.2),
+                            side: const BorderSide(
+                                color: Colors.white60, width: 1.2),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14)),
                           ),
@@ -300,21 +277,19 @@ class BillsScreen extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _launchOnlineBill(context, meters[i].referenceNo),
+                            onPressed: () => _launchOnlineBill(
+                                context, meters[i].referenceNo),
                             icon: const Icon(Icons.receipt_long_rounded,
                                 size: 16),
                             label: const Text('View Online Bill',
                                 style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold)),
+                                    fontSize: 13, fontWeight: FontWeight.bold)),
                             style: OutlinedButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               foregroundColor: AppColors.primary,
                               side: BorderSide(
-                                  color: AppColors.primary
-                                      .withValues(alpha: 0.3)),
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.3)),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12)),
                             ),
