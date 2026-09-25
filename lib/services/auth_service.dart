@@ -24,7 +24,6 @@ class AuthService {
   static const _defaultTemplateId = 'template_hkznxbc';
   static const _defaultPublicKey = 'oLYVdT8DgvxIUdOjj';
   static const _otpLifetime = Duration(minutes: 30);
-  static const _resendCooldown = Duration(seconds: 45);
   static const _maxAttempts = 10;
 
   User? get currentUser => _auth.currentUser;
@@ -84,23 +83,6 @@ class AuthService {
     final publicKey = _envOrDefault('EMAILJS_PUBLIC_KEY', _defaultPublicKey);
 
     final userRef = _firestore.collection('users').doc(user.uid);
-    final existing = await userRef.get();
-    final data = existing.data();
-    final lastSent = data?['otpSentAt'];
-
-    // If within cooldown AND a valid unexpired code already exists,
-    // return silently — the user already has a working code in their inbox.
-    if (lastSent is Timestamp &&
-        DateTime.now().difference(lastSent.toDate()) < _resendCooldown) {
-      final expiresAt = data?['otpExpiresAt'];
-      final hasValidCode = (data?['pendingOtpCode'] != null || data?['pendingOtpHash'] != null) &&
-          (expiresAt is Timestamp && expiresAt.toDate().isAfter(DateTime.now()));
-      if (hasValidCode) {
-        // Existing code is still valid — no need to send a new one
-        return;
-      }
-      throw StateError('Please wait before requesting another code.');
-    }
 
     final code = (Random.secure().nextInt(900000) + 100000).toString();
     final toName = name?.trim().isNotEmpty == true

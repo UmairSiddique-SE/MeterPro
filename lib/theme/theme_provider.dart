@@ -2,28 +2,20 @@ import 'package:flutter/material.dart';
 
 /// Global theme state — call ThemeProvider.of(context).toggle() to switch modes.
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _mode = ThemeMode.light; // default: light
-
-  ThemeMode get mode => _mode;
-  bool get isDark => _mode == ThemeMode.dark;
+  ThemeMode get mode => ThemeMode.light;
+  bool get isDark => false;
 
   void toggle() {
-    _mode = isDark ? ThemeMode.light : ThemeMode.dark;
+    // Light mode only
     notifyListeners();
   }
 
   void setDark() {
-    if (!isDark) {
-      _mode = ThemeMode.dark;
-      notifyListeners();
-    }
+    // Light mode only
   }
 
   void setLight() {
-    if (isDark) {
-      _mode = ThemeMode.light;
-      notifyListeners();
-    }
+    // Light mode only
   }
 
   static ThemeProvider of(BuildContext context) {

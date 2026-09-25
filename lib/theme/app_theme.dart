@@ -179,76 +179,8 @@ class AppTheme {
     );
   }
 
-  // ─── DARK THEME ──────────────────────────────
-  static ThemeData get dark {
-    final base = ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.darkBg,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
-        primary: AppColors.primary,
-        secondary: AppColors.amber,
-        tertiary: AppColors.cyan,
-        surface: AppColors.darkSurface,
-        onSurface: AppColors.darkTextPrimary,
-        brightness: Brightness.dark,
-      ),
-    );
-    return base.copyWith(
-      textTheme: _buildTextTheme(base.textTheme, AppColors.darkTextPrimary),
-      inputDecorationTheme: _inputTheme(
-        fill: AppColors.darkSurface2,
-        border: AppColors.darkBorder,
-        primary: AppColors.primaryLight,
-        muted: AppColors.darkTextMuted,
-      ),
-      elevatedButtonTheme: _elevatedButtonTheme(),
-      outlinedButtonTheme: _outlinedButtonTheme(AppColors.darkBorder),
-      cardTheme: _cardTheme(AppColors.darkSurface, AppColors.darkBorder),
-      appBarTheme: AppBarTheme(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        backgroundColor: AppColors.darkBg,
-        foregroundColor: AppColors.darkTextPrimary,
-        titleTextStyle: GoogleFonts.poppins(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: AppColors.darkTextPrimary,
-        ),
-        iconTheme: const IconThemeData(color: AppColors.darkTextPrimary),
-      ),
-      dividerTheme: const DividerThemeData(
-        color: AppColors.darkBorder,
-        thickness: 1,
-        space: 1,
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primaryLight;
-          return Colors.transparent;
-        }),
-        checkColor: WidgetStateProperty.all(Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-        side: const BorderSide(color: AppColors.darkBorder, width: 1.5),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.darkSurface3,
-        contentTextStyle: GoogleFonts.inter(color: AppColors.darkTextPrimary, fontSize: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        behavior: SnackBarBehavior.floating,
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.darkSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        titleTextStyle: GoogleFonts.poppins(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: AppColors.darkTextPrimary,
-        ),
-      ),
-    );
-  }
+  // ─── DARK THEME (Redirected to vibrant Light Theme) ─────
+  static ThemeData get dark => light;
 
   // ─── HELPERS ─────────────────────────────────
   static TextTheme _buildTextTheme(TextTheme base, Color primaryColor) {
