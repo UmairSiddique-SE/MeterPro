@@ -407,25 +407,7 @@ class BillsScreen extends StatelessWidget {
                         style:
                             const TextStyle(color: Colors.white70, fontSize: 11),
                       ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: () =>
-                              _showPaymentBottomSheet(context, 'Total', totalDue, meters: meters),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: AppColors.primary,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: const Text('Pay All Bills',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         height: 46,
@@ -554,54 +536,28 @@ class BillsScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () =>
-                                    _launchOnlineBill(context, meters[i].referenceNo),
-                                icon: const Icon(Icons.receipt_long_rounded,
-                                    size: 16),
-                                label: const Text('Online Bill',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  foregroundColor: AppColors.primaryLight,
-                                  side: BorderSide(
-                                      color: AppColors.primaryLight
-                                          .withValues(alpha: 0.2)),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                _launchOnlineBill(context, meters[i].referenceNo),
+                            icon: const Icon(Icons.receipt_long_rounded,
+                                size: 16),
+                            label: const Text('View Online Bill',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              foregroundColor: AppColors.primary,
+                              side: BorderSide(
+                                  color: AppColors.primary
+                                      .withValues(alpha: 0.3)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _showPaymentBottomSheet(
-                                    context, meters[i].name, meters[i].monthlyBillPkr,
-                                    meter: meters[i]),
-                                icon: const Icon(Icons.download_rounded,
-                                    size: 16),
-                                label: const Text('Pay Now',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.accentGreen,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  elevation: 0,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
