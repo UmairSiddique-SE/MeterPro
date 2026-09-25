@@ -13,8 +13,8 @@ class OtpVerificationScreen extends StatefulWidget {
     required this.email,
     this.name,
     this.phoneNumber,
-    // sendInitialCode: true only for brand new signups (first-ever code)
-    this.sendInitialCode = false,
+    // sendInitialCode: true so code auto-sends on screen load
+    this.sendInitialCode = true,
   });
 
   final String email;
@@ -112,6 +112,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   // ── SEND CODE: only called when user taps "Send Code" / "Resend Code" ─────
   Future<void> _sendCode({bool isInitial = false}) async {
     if (!mounted) return;
+    if (!isInitial && _cooldownSeconds > 0) {
+      _show('Please wait $_cooldownSeconds seconds before requesting a new code.');
+      return;
+    }
     setState(() => _loading = true);
     try {
       await AuthService.instance.requestOtp(
@@ -122,8 +126,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       _clearCode();
       _startCooldown(45);
       _show(isInitial
-          ? 'Code sent to ${widget.email}. Check your inbox.'
-          : 'New code sent to ${widget.email}. Check your inbox.');
+          ? 'Verification code sent to ${widget.email}. Check your inbox.'
+          : 'New verification code sent to ${widget.email}. Check your inbox.');
     } catch (error) {
       if (mounted) _show(_messageFor(error));
     } finally {
@@ -196,26 +200,25 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   String _messageFor(Object error) {
     if (error is FirebaseException) {
-      return error.message ?? 'Connection issue. Please check your network.';
+      return error.message ?? error.toString();
     }
     if (error is StateError) {
       return error.message;
     }
-    final msg = error.toString().toLowerCase();
-    if (msg.contains('socket') || msg.contains('network') ||
-        msg.contains('timeout') || msg.contains('client')) {
+    final msg = error.toString();
+    final lower = msg.toLowerCase();
+    if (lower.contains('socket') || lower.contains('network') ||
+        lower.contains('timeout') || lower.contains('client')) {
       return 'No internet connection. Please check your network and try again.';
     }
-    if (msg.contains('expired')) {
+    if (lower.contains('expired')) {
       return 'Code has expired. Please tap "Send Code" to get a new one.';
     }
-    if (msg.contains('invalid') || msg.contains('wrong') || msg.contains('incorrect')) {
+    if (lower.contains('invalid') || lower.contains('wrong') || lower.contains('incorrect')) {
       return 'Invalid code. Please check your email and try again.';
     }
-    if (msg.contains('wait') || msg.contains('cooldown')) {
-      return error.toString();
-    }
-    return 'Something went wrong. Please try again.';
+    final cleaned = msg.replaceAll(RegExp(r'^Exception:\s*'), '').trim();
+    return cleaned.isNotEmpty ? cleaned : 'Something went wrong. Please try again.';
   }
 
   Future<void> _showSuccessDialog() {

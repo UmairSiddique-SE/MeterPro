@@ -105,7 +105,7 @@ class _AuthGate extends StatelessWidget {
             // sendInitialCode: false → user manually taps Send Code
             return OtpVerificationScreen(
               email: user.email ?? '',
-              sendInitialCode: false,
+              sendInitialCode: true,
             );
           },
         );
