@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -12,12 +11,6 @@ import 'theme/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (_) {
-    // Fallback defaults will be used if .env is not found
-  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
