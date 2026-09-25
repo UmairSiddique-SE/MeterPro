@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// A wrapper widget that provides a subtle "press-down" scale effect.
+/// A wrapper widget that provides a subtle "press-down" scale effect with gentle haptics.
 class ScaleTap extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double scaleDown;
+  final bool enableHaptics;
 
   const ScaleTap({
     super.key,
     required this.child,
     this.onTap,
     this.scaleDown = 0.96,
+    this.enableHaptics = true,
   });
 
   @override
@@ -26,10 +29,10 @@ class _ScaleTapState extends State<ScaleTap> with SingleTickerProviderStateMixin
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 90),
     );
     _scale = Tween<double>(begin: 1.0, end: widget.scaleDown).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
     );
   }
 
@@ -39,7 +42,13 @@ class _ScaleTapState extends State<ScaleTap> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  void _handleTapDown(_) => _ctrl.forward();
+  void _handleTapDown(_) {
+    if (widget.enableHaptics) {
+      HapticFeedback.selectionClick();
+    }
+    _ctrl.forward();
+  }
+
   void _handleTapUp(_) => _ctrl.reverse();
   void _handleTapCancel() => _ctrl.reverse();
 
@@ -146,3 +155,97 @@ class SmoothPageRoute<T> extends PageRouteBuilder<T> {
     );
   }
 }
+
+/// Smoothly animates number values counting up on display.
+class AnimatedNumberText extends StatelessWidget {
+  final num value;
+  final TextStyle? style;
+  final String Function(num) formatter;
+  final Duration duration;
+
+  const AnimatedNumberText({
+    super.key,
+    required this.value,
+    required this.formatter,
+    this.style,
+    this.duration = const Duration(milliseconds: 700),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: value.toDouble()),
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      builder: (context, val, child) {
+        return Text(
+          formatter(val),
+          style: style,
+        );
+      },
+    );
+  }
+}
+
+/// A stylish pulsing live dot indicator for active meters and online status.
+class PulsingStatusDot extends StatefulWidget {
+  final Color color;
+  final double size;
+
+  const PulsingStatusDot({
+    super.key,
+    required this.color,
+    this.size = 8.0,
+  });
+
+  @override
+  State<PulsingStatusDot> createState() => _PulsingStatusDotState();
+}
+
+class _PulsingStatusDotState extends State<PulsingStatusDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
+    _pulse = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) => Container(
+        width: widget.size * _pulse.value,
+        height: widget.size * _pulse.value,
+        decoration: BoxDecoration(
+          color: widget.color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: widget.color.withValues(alpha: 0.5 * _pulse.value),
+              blurRadius: 6 * _pulse.value,
+              spreadRadius: 1.5 * _pulse.value,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

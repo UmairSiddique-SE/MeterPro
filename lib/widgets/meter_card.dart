@@ -50,22 +50,16 @@ class MeterCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: meter.isActive ? AppColors.accentGreen : Colors.grey,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      if (meter.isActive)
-                        BoxShadow(
-                          color: AppColors.accentGreen.withValues(alpha: 0.4),
-                          blurRadius: 4,
-                          spreadRadius: 1,
+                meter.isActive
+                    ? const PulsingStatusDot(color: AppColors.accentGreen, size: 8)
+                    : Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.grey,
+                          shape: BoxShape.circle,
                         ),
-                    ],
-                  ),
-                ),
+                      ),
               ],
             ),
             const SizedBox(height: 2),
@@ -178,8 +172,9 @@ class MeterCard extends StatelessWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(
-                          '${meter.monthlyUnitsKwh}',
+                        child: AnimatedNumberText(
+                          value: meter.monthlyUnitsKwh,
+                          formatter: (v) => v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 1),
                           style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
