@@ -42,7 +42,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _loading = true);
-    final email = _emailCtrl.text.trim();
+    var email = _emailCtrl.text.trim().toLowerCase();
+    if (email.endsWith('@gamil.com')) {
+      email = email.replaceAll('@gamil.com', '@gmail.com');
+    } else if (email.endsWith('@gmai.com')) {
+      email = email.replaceAll('@gmai.com', '@gmail.com');
+    } else if (email.endsWith('@gmaill.com')) {
+      email = email.replaceAll('@gmaill.com', '@gmail.com');
+    }
 
     try {
       await AuthService.instance.signUp(

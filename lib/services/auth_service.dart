@@ -23,9 +23,9 @@ class AuthService {
   static const _defaultServiceId = 'service_zue4ncs';
   static const _defaultTemplateId = 'template_hkznxbc';
   static const _defaultPublicKey = 'oLYVdT8DgvxIUdOjj';
-  static const _otpLifetime = Duration(minutes: 10);
-  static const _resendCooldown = Duration(seconds: 60);
-  static const _maxAttempts = 5;
+  static const _otpLifetime = Duration(minutes: 30);
+  static const _resendCooldown = Duration(seconds: 45);
+  static const _maxAttempts = 10;
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -140,6 +140,7 @@ class AuthService {
 
     final otpHash = sha256.convert(utf8.encode(code)).toString();
     await userRef.set({
+      'pendingOtpCode': code,
       'pendingOtpHash': otpHash,
       'otpExpiresAt': Timestamp.fromDate(DateTime.now().add(_otpLifetime)),
       'otpSentAt': FieldValue.serverTimestamp(),
@@ -148,8 +149,8 @@ class AuthService {
   }
 
   Future<void> verifyOtp(String code) async {
-    final normalized = code.trim();
-    if (!RegExp(r'^\d{6}$').hasMatch(normalized)) {
+    final normalized = code.replaceAll(RegExp(r'\D'), '').trim();
+    if (normalized.length != 6) {
       throw StateError('Please enter a valid 6-digit code.');
     }
 
@@ -159,42 +160,54 @@ class AuthService {
     }
 
     final userRef = _firestore.collection('users').doc(user.uid);
-    final verified = await _firestore.runTransaction<bool>((transaction) async {
+    final errorMsg = await _firestore.runTransaction<String?>((transaction) async {
       final snapshot = await transaction.get(userRef);
       final data = snapshot.data();
-      if (data == null) return false;
+      if (data == null) {
+        return 'No user record found. Please tap Resend Code.';
+      }
 
       final expiresAt = data['otpExpiresAt'];
       final attempts = (data['otpAttempts'] as num?)?.toInt() ?? 0;
       final expectedHash = data['pendingOtpHash']?.toString();
-      if (expectedHash == null ||
-          expiresAt is! Timestamp ||
-          expiresAt.toDate().isBefore(DateTime.now()) ||
-          attempts >= _maxAttempts) {
-        return false;
+      final expectedCode = data['pendingOtpCode']?.toString();
+
+      if (expectedHash == null && expectedCode == null) {
+        return 'No active verification code found. Please tap Resend Code.';
+      }
+
+      if (attempts >= _maxAttempts) {
+        return 'Too many incorrect attempts. Please tap Resend Code for a new code.';
+      }
+
+      if (expiresAt is Timestamp && expiresAt.toDate().isBefore(DateTime.now())) {
+        return 'Verification code has expired. Please tap Resend Code.';
       }
 
       final submittedHash = sha256.convert(utf8.encode(normalized)).toString();
-      if (submittedHash != expectedHash) {
+      final isMatch = (expectedCode != null && expectedCode == normalized) ||
+          (expectedHash != null && expectedHash == submittedHash);
+
+      if (!isMatch) {
         transaction.update(userRef, {'otpAttempts': attempts + 1});
-        return false;
+        return 'Incorrect verification code. Please check your email or tap Resend Code.';
       }
 
       transaction.update(userRef, {
         'isVerified': true,
         'emailOtpVerified': true,
         'verifiedAt': FieldValue.serverTimestamp(),
+        'pendingOtpCode': FieldValue.delete(),
         'pendingOtpHash': FieldValue.delete(),
         'otpExpiresAt': FieldValue.delete(),
         'otpSentAt': FieldValue.delete(),
         'otpAttempts': FieldValue.delete(),
       });
-      return true;
+      return null; // success
     });
 
-    if (!verified) {
-      throw StateError(
-          'Invalid or expired verification code. Please request a new code.');
+    if (errorMsg != null) {
+      throw StateError(errorMsg);
     }
   }
 
