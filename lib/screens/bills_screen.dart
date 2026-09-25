@@ -376,13 +376,13 @@ class BillsScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: AppColors.cardGradient,
+                    gradient: AppColors.blueGradient,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
@@ -405,37 +405,41 @@ class BillsScreen extends StatelessWidget {
                       Text(
                         'Due by ${DateFormat('dd MMM yyyy').format(DateTime.now().add(const Duration(days: 15)))} • ${meters.length} meters',
                         style:
-                            const TextStyle(color: Colors.white54, fontSize: 11),
+                            const TextStyle(color: Colors.white70, fontSize: 11),
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
+                        height: 48,
                         child: ElevatedButton(
                           onPressed: () =>
                               _showPaymentBottomSheet(context, 'Total', totalDue, meters: meters),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(alpha: 0.15),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.primary,
+                            elevation: 2,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14)),
-                            side: const BorderSide(color: Colors.white24),
                           ),
-                          child: const Text('Pay All Bills'),
+                          child: const Text('Pay All Bills',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
+                        height: 46,
                         child: OutlinedButton.icon(
                           onPressed: meters.length == 1
                               ? () => _scanBill(context, meters.first)
                               : null,
-                          icon: const Icon(Icons.document_scanner_outlined),
+                          icon: const Icon(Icons.document_scanner_outlined, size: 18),
                           label: const Text('Scan Latest Bill'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white38),
+                            side: const BorderSide(color: Colors.white60, width: 1.2),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
                           ),
                         ),
                       ),
