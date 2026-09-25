@@ -37,7 +37,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
     _meter = widget.meter;
     if (widget.openReadingEditor) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showAddReadingOptions();
+        if (mounted) _showManualEntrySheet();
       });
     }
   }
@@ -304,9 +304,44 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                   ),
                 ),
               ),
-              const Text(
-                'Manual Reading Entry',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Enter Meter Reading',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  InkWell(
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      await _openCameraScanForReading();
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.qr_code_scanner_rounded,
+                              size: 16, color: AppColors.primary),
+                          SizedBox(width: 4),
+                          Text(
+                            'Camera Scan',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
               Text(
@@ -1176,7 +1211,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: _busy ? null : _showAddReadingOptions,
+                        onPressed: _busy ? null : _showManualEntrySheet,
                         icon: const Icon(Icons.add_circle_outline_rounded,
                             size: 20),
                         label: const Text('Add Meter Reading',

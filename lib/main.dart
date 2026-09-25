@@ -7,6 +7,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/otp_verification_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
+import 'services/reminder_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 
@@ -16,6 +17,7 @@ Future<void> main() async {
     await dotenv.load(fileName: '.env');
   } catch (_) {}
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await ReminderService.instance.initialize();
   runApp(const MeterUnitApp());
 }
 
