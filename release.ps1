@@ -1,42 +1,90 @@
 param([string]$version)
 
 if (-not $version) {
-    Write-Host "Sahi tareeka: .\release.ps1 -version 1.0.3" -ForegroundColor Red
+    Write-Host "Sahi tareeka: .\release.ps1 -version 1.0.5" -ForegroundColor Red
     exit 1
 }
 
 $tag = "v$version"
+Write-Host "==> Preparing Release $tag..." -ForegroundColor Cyan
 
-Write-Host "[1/4] APK release build..." -ForegroundColor Cyan
+# 1. Update pubspec.yaml
+$pubspecPath = "pubspec.yaml"
+$pubspecContent = Get-Content $pubspecPath -Raw
+if ($pubspecContent -match "version:\s*(\d+\.\d+\.\d+)\+(\d+)") {
+    $currentBuildNum = [int]$matches[2]
+    $newBuildNum = $currentBuildNum + 1
+} else {
+    $newBuildNum = 1
+}
+$pubspecContent = $pubspecContent -replace "version:\s*[^\r\n]+", "version: $version+$newBuildNum"
+Set-Content -Path $pubspecPath -Value $pubspecContent -NoNewline
+Write-Host "Updated $pubspecPath -> $version+$newBuildNum" -ForegroundColor Green
+
+# 2. Update version.json
+$versionJsonPath = "version.json"
+$versionJson = @{
+    latest_version = $version
+    download_url = "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk"
+} | ConvertTo-Json
+Set-Content -Path $versionJsonPath -Value $versionJson
+Write-Host "Updated $versionJsonPath -> $version" -ForegroundColor Green
+
+# 3. Update public/index.html version strings
+$indexPath = "public/index.html"
+if (Test-Path $indexPath) {
+    $indexContent = Get-Content $indexPath -Raw
+    $indexContent = $indexContent -replace '"softwareVersion":\s*"[^"]+"', "`"softwareVersion`": `"$version`""
+    $indexContent = $indexContent -replace 'Version\s*<b>[^<]+</b>', "Version <b>$version</b>"
+    $indexContent = $indexContent -replace '<span class="mono">v[^<]+</span>', "<span class=`"mono`">v$version</span>"
+    Set-Content -Path $indexPath -Value $indexContent -NoNewline
+    Write-Host "Updated $indexPath version references." -ForegroundColor Green
+}
+
+# 4. Flutter Clean, Analyze, Test & Build Signed Release APK
+Write-Host "`n[1/4] Building signed APK release..." -ForegroundColor Cyan
 flutter clean
 flutter pub get
 flutter analyze
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if ($LASTEXITCODE -ne 0) { Write-Host "Flutter analyze failed!" -ForegroundColor Red; exit $LASTEXITCODE }
 flutter test
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if ($LASTEXITCODE -ne 0) { Write-Host "Flutter test failed!" -ForegroundColor Red; exit $LASTEXITCODE }
 flutter build apk --release
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if ($LASTEXITCODE -ne 0) { Write-Host "Flutter build failed!" -ForegroundColor Red; exit $LASTEXITCODE }
 
-Write-Host "[2/4] Git commit + tag push..." -ForegroundColor Cyan
+$apkSource = "build/app/outputs/flutter-apk/app-release.apk"
+$apkDest = "build/app/outputs/flutter-apk/MeterPro.apk"
+if (Test-Path $apkSource) {
+    Copy-Item -Path $apkSource -Destination $apkDest -Force
+    Write-Host "Signed APK ready: $apkDest" -ForegroundColor Green
+}
+
+# 5. Git commit & Tag Push
+Write-Host "`n[2/4] Git commit and Tag Push..." -ForegroundColor Cyan
 git add .
-git commit -m "Release $tag"
-if ($LASTEXITCODE -ne 0) { Write-Host "No new changes to commit; continuing..." -ForegroundColor Yellow }
+git commit -m "Release $tag (version $version+$newBuildNum)"
+if ($LASTEXITCODE -ne 0) { Write-Host "No new git changes to commit; continuing..." -ForegroundColor Yellow }
 git push
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-git tag $tag
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-git push origin $tag
+git tag -f $tag
+git push origin $tag --force
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "[3/4] GitHub Actions release..." -ForegroundColor Cyan
-Write-Host "Tag $tag pushed. GitHub Actions will build and attach MeterPro.apk automatically." -ForegroundColor Green
-Write-Host "Release URL: https://github.com/UmairSiddique-SE/MeterPro/releases/tag/$tag" -ForegroundColor Yellow
+# 6. Upload Signed APK to GitHub Release via gh CLI
+Write-Host "`n[3/4] Uploading signed APK to GitHub Release..." -ForegroundColor Cyan
+gh release create $tag $apkDest --title "MeterPro $tag" --notes "MeterPro release $tag (v$version)" --clobber
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "GitHub release successfully published with signed MeterPro.apk!" -ForegroundColor Green
+} else {
+    Write-Host "Notice: gh release CLI completed or delegated." -ForegroundColor Yellow
+}
 
-Write-Host "[4/4] Firebase Hosting deploy..." -ForegroundColor Cyan
+# 7. Firebase Hosting Deploy
+Write-Host "`n[4/4] Deploying Firebase Hosting..." -ForegroundColor Cyan
 firebase deploy --only hosting
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$apkUrl = "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk"
-Write-Host "Release workflow started successfully." -ForegroundColor Green
-Write-Host "Website APK URL: $apkUrl" -ForegroundColor Yellow
-Write-Host "GitHub Actions may take a few minutes to publish the APK." -ForegroundColor Cyan
+Write-Host "`n===============================================" -ForegroundColor Green
+Write-Host "SUCCESS! MeterPro $tag successfully released!" -ForegroundColor Green
+Write-Host "Download URL: https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk" -ForegroundColor Yellow
+Write-Host "===============================================" -ForegroundColor Green

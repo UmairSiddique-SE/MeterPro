@@ -1,12 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/meter.dart';
+import '../services/app_update_service.dart';
 import '../services/meter_repository.dart';
 import '../services/ocr_service.dart';
 import '../theme/app_theme.dart';
@@ -44,67 +41,15 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _navIndex = 0;
-  static final Uri _versionManifestUri = Uri.parse(
-    'https://raw.githubusercontent.com/UmairSiddique-SE/MeterPro/main/version.json',
-  );
 
   @override
   void initState() {
     super.initState();
-    _checkForUpdate();
-  }
-
-  Future<void> _checkForUpdate() async {
-    try {
-      final response = await http.get(_versionManifestUri);
-      if (response.statusCode != 200) return;
-
-      final manifest = jsonDecode(response.body) as Map<String, dynamic>;
-      final latestVersion = manifest['latest_version']?.toString().trim();
-      final downloadUrl = manifest['download_url']?.toString().trim();
-      if (latestVersion == null ||
-          latestVersion.isEmpty ||
-          downloadUrl == null ||
-          downloadUrl.isEmpty) {
-        return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppUpdateService.instance.checkAndShow(context);
       }
-
-      final packageInfo = await PackageInfo.fromPlatform();
-      if (!mounted || packageInfo.version == latestVersion) return;
-
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Update Available'),
-          content: Text(
-            'A new version ($latestVersion) of MeterPro is available. '
-            'Please update to continue using the latest features.',
-          ),
-          actions: [
-            ElevatedButton.icon(
-              onPressed: () async {
-                final uri = Uri.tryParse(downloadUrl);
-                if (uri == null ||
-                    !await launchUrl(uri,
-                        mode: LaunchMode.externalApplication)) {
-                  if (dialogContext.mounted) {
-                    ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      const SnackBar(
-                          content: Text('Could not open update link.')),
-                    );
-                  }
-                }
-              },
-              icon: const Icon(Icons.download_rounded),
-              label: const Text('Update Now'),
-            ),
-          ],
-        ),
-      );
-    } catch (_) {
-      // Update checks must not prevent the app from opening offline.
-    }
+    });
   }
 
   void _openMeter(MeterModel meter) async {

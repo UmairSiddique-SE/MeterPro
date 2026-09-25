@@ -5,7 +5,6 @@ import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/splash_screen.dart';
-import 'services/app_update_service.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
@@ -44,7 +43,7 @@ class _MeterUnitAppState extends State<MeterUnitApp> {
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: _themeProvider.mode,
-        home: _AppUpdateGate(child: _SplashGate(themeProvider: _themeProvider)),
+        home: _SplashGate(themeProvider: _themeProvider),
       ),
     );
   }
@@ -95,21 +94,3 @@ class _AuthGate extends StatelessWidget {
   }
 }
 
-class _AppUpdateGate extends StatefulWidget {
-  final Widget child;
-  const _AppUpdateGate({required this.child});
-  @override
-  State<_AppUpdateGate> createState() => _AppUpdateGateState();
-}
-
-class _AppUpdateGateState extends State<_AppUpdateGate> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AppUpdateService.instance.checkAndShow(context);
-    });
-  }
-  @override
-  Widget build(BuildContext context) => widget.child;
-}

@@ -1,21 +1,20 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppUpdateInfo {
   final String version;
-  final int buildNumber;
   final String apkUrl;
   final String releaseNotes;
   final bool forceUpdate;
 
   const AppUpdateInfo({
     required this.version,
-    required this.buildNumber,
     required this.apkUrl,
     required this.releaseNotes,
-    required this.forceUpdate,
+    this.forceUpdate = false,
   });
 }
 
@@ -25,28 +24,30 @@ class AppUpdateService {
   static final instance = AppUpdateService._();
   bool _dialogShown = false;
 
+  static final Uri _manifestUri = Uri.parse(
+    'https://raw.githubusercontent.com/UmairSiddique-SE/MeterPro/main/version.json',
+  );
+
   Future<AppUpdateInfo?> checkForUpdate() async {
     try {
       final package = await PackageInfo.fromPlatform();
-      final snapshot = await FirebaseFirestore.instance
-          .collection('app_config')
-          .doc('android')
-          .get();
-      final data = snapshot.data();
-      if (data == null) return null;
+      final response = await http.get(_manifestUri).timeout(
+        const Duration(seconds: 4),
+      );
+      if (response.statusCode != 200) return null;
 
-      final latestBuild = (data['buildNumber'] as num?)?.toInt() ?? 0;
-      final apkUrl = data['apkUrl'] as String? ?? '';
-      if (latestBuild <= int.parse(package.buildNumber) || apkUrl.isEmpty) {
-        return null;
-      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final latestVersion = data['latest_version']?.toString().trim() ?? '';
+      final apkUrl = data['download_url']?.toString().trim() ?? '';
+
+      if (latestVersion.isEmpty || apkUrl.isEmpty) return null;
+      if (latestVersion == package.version) return null;
 
       return AppUpdateInfo(
-        version: data['version'] as String? ?? 'New version',
-        buildNumber: latestBuild,
+        version: latestVersion,
         apkUrl: apkUrl,
-        releaseNotes: data['releaseNotes'] as String? ?? '',
-        forceUpdate: data['forceUpdate'] as bool? ?? false,
+        releaseNotes: 'A newer version ($latestVersion) of MeterPro is available with improvements.',
+        forceUpdate: false,
       );
     } catch (_) {
       return null;

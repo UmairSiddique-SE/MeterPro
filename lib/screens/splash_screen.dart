@@ -31,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _exitOpacity;
   late final Animation<double> _pulse;
 
-  static const Duration _splashDuration = Duration(milliseconds: 2800);
+  static const Duration _splashDuration = Duration(milliseconds: 1400);
 
   @override
   void initState() {
@@ -39,22 +39,22 @@ class _SplashScreenState extends State<SplashScreen>
 
     _orbitCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
+      duration: const Duration(seconds: 6),
     )..repeat();
 
     _entryCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 800),
     );
 
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
     _exitCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 350),
     );
 
     _logoScale = CurvedAnimation(
