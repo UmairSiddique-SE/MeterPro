@@ -132,9 +132,12 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
   }
 
   Future<void> _checkPermissionAndInitCamera() async {
-    final status = await Permission.camera.request();
+    var status = await Permission.camera.status;
+    if (!status.isGranted) {
+      status = await Permission.camera.request();
+    }
     if (status.isGranted) {
-      setState(() => _isPermissionGranted = true);
+      if (mounted) setState(() => _isPermissionGranted = true);
       await _initCamera();
     } else {
       if (mounted) setState(() => _isPermissionGranted = false);
@@ -155,9 +158,7 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
 
       final controller = CameraController(
         backCam,
-        // The LCD digits are narrow and low-contrast; the higher stream
-        // resolution gives ML Kit enough detail to read values such as 130018.
-        ResolutionPreset.veryHigh,
+        ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.nv21,
       );
@@ -736,6 +737,36 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
                         width: _controller!.value.previewSize?.height ?? 1,
                         height: _controller!.value.previewSize?.width ?? 1,
                         child: CameraPreview(_controller!),
+                      ),
+                    ),
+                  )
+                else
+                  Positioned.fill(
+                    child: Container(
+                      color: const Color(0xFF0A0F1E),
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary),
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              'Starting camera...',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

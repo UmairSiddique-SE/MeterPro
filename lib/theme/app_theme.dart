@@ -2,52 +2,63 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// ─────────────────────────────────────────────
-///  MeterPro Design System — Full Premium Theme
-///  Supports Light + Dark modes
+///  MeterPro Design System — Full Aesthetic Theme
 /// ─────────────────────────────────────────────
 class AppColors {
   AppColors._();
 
   // ── Brand / Primary ──
-  static const Color navy900 = Color(0xFF0A0F1E);
-  static const Color navy800 = Color(0xFF0D1530);
-  static const Color navy700 = Color(0xFF111B3A);
-  static const Color navy600 = Color(0xFF162248);
-  static const Color navy500 = Color(0xFF1E2E60);
-  static const Color primary = Color(0xFF2445C8); // vivid electric blue
-  static const Color primaryLight = Color(0xFF3D5EE8);
-  static const Color primaryGlow = Color(0x402445C8);
+  static const Color navy900 = Color(0xFF070B19);
+  static const Color navy800 = Color(0xFF0F172A);
+  static const Color navy700 = Color(0xFF1E293B);
+  static const Color navy600 = Color(0xFF334155);
+  static const Color navy500 = Color(0xFF475569);
 
-  // ── Accent ──
-  static const Color amber = Color(0xFFFFB020); // energy/bill highlight
-  static const Color amberDim = Color(0xFFCC8A00);
-  static const Color amberGlow = Color(0x33FFB020);
-  static const Color green = Color(0xFF22C55E); // active/success
-  static const Color greenGlow = Color(0x2222C55E);
-  static const Color red = Color(0xFFEF4444);
-  static const Color redGlow = Color(0x22EF4444);
-  static const Color cyan = Color(0xFF06B6D4); // scan/tech accent
+  // Vibrant Electric Sapphire & Royal Blue
+  static const Color primary = Color(0xFF2563EB); // Vibrant Electric Blue
+  static const Color primaryDark = Color(0xFF1D4ED8);
+  static const Color primaryLight = Color(0xFF3B82F6);
+  static const Color primarySoft = Color(0xFFEFF6FF);
+  static const Color primaryGlow = Color(0x352563EB);
 
-  // ── Light Mode ──
-  static const Color lightBg = Color(0xFFF5F7FF);
+  // ── Aesthetic Accents ──
+  static const Color amber = Color(0xFFF59E0B); // Amber / Gold Energy
+  static const Color amberDark = Color(0xFFD97706);
+  static const Color amberSoft = Color(0xFFFFFBEB);
+  static const Color amberGlow = Color(0x30F59E0B);
+
+  static const Color green = Color(0xFF10B981); // Emerald Green Active
+  static const Color greenDark = Color(0xFF059669);
+  static const Color greenSoft = Color(0xFFECFDF5);
+  static const Color greenGlow = Color(0x2510B981);
+
+  static const Color red = Color(0xFFEF4444); // Crimson Alert
+  static const Color redSoft = Color(0xFFFEF2F2);
+  static const Color redGlow = Color(0x25EF4444);
+
+  static const Color cyan = Color(0xFF06B6D4); // Cyber Cyan
+  static const Color purple = Color(0xFF8B5CF6); // Royal Violet
+
+  // ── Light Mode Surface ──
+  static const Color lightBg = Color(0xFFF8FAFC);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurface2 = Color(0xFFF0F3FF);
-  static const Color lightBorder = Color(0xFFE2E8FF);
-  static const Color lightTextPrimary = Color(0xFF0A0F1E);
-  static const Color lightTextSecondary = Color(0xFF4A5580);
-  static const Color lightTextMuted = Color(0xFF8B93B3);
+  static const Color lightSurface2 = Color(0xFFF1F5F9);
+  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color lightTextPrimary = Color(0xFF0F172A);
+  static const Color lightTextSecondary = Color(0xFF475569);
+  static const Color lightTextMuted = Color(0xFF94A3B8);
 
-  // ── Dark Mode ──
-  static const Color darkBg = Color(0xFF080C18);
-  static const Color darkSurface = Color(0xFF0E1326);
-  static const Color darkSurface2 = Color(0xFF141A30);
-  static const Color darkSurface3 = Color(0xFF1A2138);
-  static const Color darkBorder = Color(0xFF1E2848);
-  static const Color darkTextPrimary = Color(0xFFECEEF8);
-  static const Color darkTextSecondary = Color(0xFF8B93B3);
-  static const Color darkTextMuted = Color(0xFF4A5580);
+  // ── Dark Mode Surface ──
+  static const Color darkBg = Color(0xFF080D1A);
+  static const Color darkSurface = Color(0xFF0F172A);
+  static const Color darkSurface2 = Color(0xFF1E293B);
+  static const Color darkSurface3 = Color(0xFF334155);
+  static const Color darkBorder = Color(0xFF1E293B);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+  static const Color darkTextMuted = Color(0xFF64748B);
 
-  // ── Legacy Compatibility Aliases ──
+  // ── Aliases ──
   static const Color textPrimary = lightTextPrimary;
   static const Color textSecondary = lightTextSecondary;
   static const Color textMuted = lightTextMuted;
@@ -61,33 +72,39 @@ class AppColors {
   static const Color accentOrange = amber;
   static const Color accentRed = red;
   static const Color accentCyan = cyan;
+  static const Color accentPurple = purple;
   static const Color accentBlue = primary;
-  static const Color primaryDark = navy700;
   static const Color divider = lightBorder;
 
-  // ── Gradients ──
+  // ── Aesthetic Gradients ──
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [navy800, navy600, Color(0xFF1E2E60)],
+    colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF1E40AF)],
   );
 
   static const LinearGradient premiumGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1A2448), Color(0xFF0D1530)],
+    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
   );
 
   static const LinearGradient amberGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFFB020), Color(0xFFFF8C00)],
+    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
   );
 
   static const LinearGradient blueGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2445C8), Color(0xFF1A35A0)],
+    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+  );
+
+  static const LinearGradient emeraldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
   );
 
   static const LinearGradient headerGradient = brandGradient;
@@ -95,13 +112,13 @@ class AppColors {
   static const LinearGradient cardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [lightSurface, lightSurface2],
+    colors: [lightSurface, Color(0xFFF8FAFC)],
   );
 
   static const LinearGradient glassGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0x20FFFFFF), Color(0x05FFFFFF)],
+    colors: [Color(0x25FFFFFF), Color(0x08FFFFFF)],
   );
 }
 
@@ -141,7 +158,7 @@ class AppTheme {
         backgroundColor: AppColors.lightBg,
         foregroundColor: AppColors.lightTextPrimary,
         titleTextStyle: GoogleFonts.poppins(
-          fontSize: 17,
+          fontSize: 18,
           fontWeight: FontWeight.w700,
           color: AppColors.lightTextPrimary,
         ),
@@ -158,13 +175,13 @@ class AppTheme {
           return Colors.transparent;
         }),
         checkColor: WidgetStateProperty.all(Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         side: const BorderSide(color: AppColors.lightBorder, width: 1.5),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.navy800,
+        backgroundColor: AppColors.navy900,
         contentTextStyle: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         behavior: SnackBarBehavior.floating,
       ),
       dialogTheme: DialogThemeData(
@@ -179,7 +196,7 @@ class AppTheme {
     );
   }
 
-  // ─── DARK THEME (Redirected to vibrant Light Theme) ─────
+  // ─── DARK THEME ─────────────────────────────
   static ThemeData get dark => light;
 
   // ─── HELPERS ─────────────────────────────────
@@ -222,23 +239,23 @@ class AppTheme {
       fillColor: fill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: primary, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: AppColors.red, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: AppColors.red, width: 2),
       ),
       hintStyle: GoogleFonts.inter(color: muted, fontSize: 14),
@@ -279,7 +296,7 @@ class AppTheme {
       color: surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         side: BorderSide(color: border),
       ),
     );
