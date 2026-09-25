@@ -30,6 +30,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final _codeFocusNodes = List.generate(6, (_) => FocusNode());
   bool _loading = false;
   bool _codeInvalid = false;
+  bool _codeSent = false; // true once a code has been successfully sent/confirmed
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
 
@@ -39,6 +40,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     if (widget.sendInitialCode) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _sendCode(isInitial: true));
     } else {
+      // Already have a code (came from login flow) — mark as sent
+      _codeSent = true;
       _startCooldown(60);
     }
   }
@@ -116,13 +119,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       _clearCode();
       _startCooldown(45);
-      _show(isInitial
-          ? 'Verification code sent to ${widget.email}'
-          : 'New code sent to ${widget.email}');
+      // Mark that a valid code exists (sent now or already in inbox)
+      setState(() => _codeSent = true);
+      if (!isInitial) {
+        _show('New code sent to ${widget.email}');
+      } else {
+        _show('Verification code sent to ${widget.email}');
+      }
     } catch (error) {
-      // Show error whether initial or resend
+      // Show error for both initial and resend
       if (mounted) _show(_messageFor(error));
-      // Still start cooldown so user doesn't spam requests
       _startCooldown(30);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -182,7 +188,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         }
         final targetIndex = (digits.length >= 6) ? 5 : digits.length;
         _codeFocusNodes[targetIndex].requestFocus();
-        if (digits.length >= 6) {
+        // Only auto-verify if we know a code was actually sent
+        if (digits.length >= 6 && _codeSent) {
           _verify();
         }
         return;

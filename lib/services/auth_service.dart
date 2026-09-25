@@ -87,10 +87,19 @@ class AuthService {
     final existing = await userRef.get();
     final data = existing.data();
     final lastSent = data?['otpSentAt'];
+
+    // If within cooldown AND a valid unexpired code already exists,
+    // return silently — the user already has a working code in their inbox.
     if (lastSent is Timestamp &&
         DateTime.now().difference(lastSent.toDate()) < _resendCooldown) {
-      throw StateError(
-          'Please wait 60 seconds before requesting another code.');
+      final expiresAt = data?['otpExpiresAt'];
+      final hasValidCode = (data?['pendingOtpCode'] != null || data?['pendingOtpHash'] != null) &&
+          (expiresAt is Timestamp && expiresAt.toDate().isAfter(DateTime.now()));
+      if (hasValidCode) {
+        // Existing code is still valid — no need to send a new one
+        return;
+      }
+      throw StateError('Please wait before requesting another code.');
     }
 
     final code = (Random.secure().nextInt(900000) + 100000).toString();
