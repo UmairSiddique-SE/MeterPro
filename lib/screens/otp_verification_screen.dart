@@ -265,22 +265,26 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   String _messageFor(Object error) {
-    final message = error.toString();
-    if (message.contains('SocketException') ||
-        message.contains('ClientException') ||
-        message.contains('TimeoutException')) {
-      return 'Could not connect to service. Please check your internet connection.';
-    }
-    if (message.contains('expired')) {
-      return 'Verification code has expired. Please request a new code.';
-    }
-    if (message.contains('Invalid verification code') || message.contains('invalid')) {
-      return 'Invalid verification code. Please check your email inbox.';
+    if (error is FirebaseException) {
+      return error.message ?? 'Database connection issue. Please check your network and try again.';
     }
     if (error is StateError) {
       return error.message;
     }
-    return 'Verification failed. Please try again.';
+    final message = error.toString().toLowerCase();
+    if (message.contains('socketexception') ||
+        message.contains('clientexception') ||
+        message.contains('timeoutexception') ||
+        message.contains('network')) {
+      return 'Internet connection issue. Please check your network connection.';
+    }
+    if (message.contains('expired')) {
+      return 'Verification code has expired. Please tap "Resend Code" for a new code.';
+    }
+    if (message.contains('invalid') || message.contains('wrong') || message.contains('incorrect')) {
+      return 'Invalid verification code. Please check your latest email or tap Resend Code.';
+    }
+    return 'Invalid code or verification failed. Please check your latest email or tap Resend Code.';
   }
 
   @override

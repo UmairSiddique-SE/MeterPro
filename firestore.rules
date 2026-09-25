@@ -6,15 +6,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    function owner() {
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function owner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
     match /users/{userId} {
-      allow read, write: if owner();
+      allow read, write: if owner(userId);
       match /{allChildren=**} {
-        allow read, write: if owner();
+        allow read, write: if owner(userId);
       }
+    }
+
+    match /global_registrations/{refId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (resource == null || resource.data.ownerUid == request.auth.uid);
     }
   }
 }
+
