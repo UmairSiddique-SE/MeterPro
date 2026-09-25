@@ -196,106 +196,120 @@ class OCRService {
 
   /// Extracts numeric meter readings (kWh / units) from extracted lines.
   int? _extractMeterReading(List<String> lines, String fullText) {
-    // Digital meters commonly show either "001234 kWh" or "kWh 001234".
+    // Pass 1: Line with explicit kWh value (and NOT impulse rate!)
     for (final line in lines) {
+      if (_isImpulseLine(line)) continue;
       final reading = _extractKwhValue(line);
-      if (reading != null) return reading;
+      if (reading != null && !_isCommonSpecNumber(reading)) return reading;
     }
 
-    // 1. Try to find specifically labeled reading
-    final readingKeywords = [
-      RegExp(
-          r'(?:present|curr(?:ent)?|new|last|prev(?:ious)?)\s*(?:reading|rdg|units?)',
-          caseSensitive: false),
-      RegExp(r'\b(?:kwh|k\.w\.h|units?|reading|active\s*energy)\b',
-          caseSensitive: false),
-    ];
-
+    // Pass 2: Line with 'kWh' or 'k.w.h', check neighboring lines (up to 3 away)
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
-      for (final kwRegex in readingKeywords) {
-        if (kwRegex.hasMatch(line)) {
-          final readingFromSameLine = _extractDigitsFromSegment(line);
-          if (readingFromSameLine != null &&
-              _isValidReadingRange(readingFromSameLine) &&
-              _digitLength(readingFromSameLine) >= 3) {
-            return readingFromSameLine;
-          }
-
-          // Check neighboring lines. Many single-phase meters print the
-          // "kWh" label right next to a small, separately-boxed decimal
-          // digit (e.g. the last, often red/orange, digit of the display).
-          // ML Kit frequently returns that lone digit as its own line right
-          // beside the "kWh" line, closer than the real multi-digit reading.
-          // Picking the FIRST valid neighbor (old behaviour) grabbed that
-          // stray "1" instead of the actual reading. Instead, scan a wider
-          // neighborhood and keep the candidate with the most digits, since
-          // the genuine reading is always the longest run.
-          int? bestVal;
-          int bestLen = 0;
-          for (int j = i - 3; j <= i + 3; j++) {
-            if (j < 0 || j >= lines.length || j == i) continue;
-            final val = _extractDigitsFromSegment(lines[j]);
-            if (val == null || !_isValidReadingRange(val)) continue;
-            final len = _digitLength(val);
-            // Require at least 3 digits so a lone decimal fragment (e.g. a
-            // single "1" or "5") next to the kWh label can never win.
-            if (len >= 3 && len > bestLen) {
-              bestVal = val;
-              bestLen = len;
-            }
-          }
-          if (bestVal != null) return bestVal;
+      if (_isImpulseLine(line)) continue;
+      if (RegExp(r'\b(?:kwh|k\.w\.h|units?|reading|active\s*energy)\b',
+              caseSensitive: false)
+          .hasMatch(line)) {
+        final sameLineVal = _extractDigitsFromSegment(line);
+        if (sameLineVal != null &&
+            _isValidReadingRange(sameLineVal) &&
+            !_isCommonSpecNumber(sameLineVal)) {
+          return sameLineVal;
         }
+
+        int? bestVal;
+        int bestLen = 0;
+        for (int j = i - 3; j <= i + 3; j++) {
+          if (j < 0 || j >= lines.length || j == i) continue;
+          final neighbor = lines[j];
+          if (_isImpulseLine(neighbor)) continue;
+          if (RegExp(r'(?:sr\.?\s*no|serial|p\.?o\.?\s*no|po\s*no|model|type)',
+                  caseSensitive: false)
+              .hasMatch(neighbor)) continue;
+
+          final val = _extractDigitsFromSegment(neighbor);
+          if (val == null ||
+              !_isValidReadingRange(val) ||
+              _isCommonSpecNumber(val)) continue;
+          final len = _digitLength(val);
+          if (len >= 3 && len > bestLen) {
+            bestVal = val;
+            bestLen = len;
+          }
+        }
+        if (bestVal != null) return bestVal;
       }
     }
 
-    // Additional fallback: Look for a 4-6 digit number near "CONSUMER DETAIL" or "UNITS"
-    final unitMatch =
-        RegExp(r'units\s*[:.\-]?\s*(\d{1,6})', caseSensitive: false)
-            .firstMatch(fullText);
-    if (unitMatch != null) {
-      final val = int.tryParse(unitMatch.group(1)!);
-      if (val != null) return val;
-    }
-
-    // Last resort: if the "kWh" label itself wasn't recognized clearly
-    // (common with blur/glare on an LCD), but exactly one line on the whole
-    // display is a clean 4-6 digit number, that is almost certainly the
-    // reading. This avoids ever guessing on a bill, which usually has many
-    // multi-digit numbers.
-    final digitOnlyCandidates = <int>[];
+    // Pass 3: Fallback for LCD screen numbers (4-7 digits)
+    // Filter out serial numbers, year, voltage, frequency, impulse, PO number
+    final candidates = <int>[];
     for (final line in lines) {
-      final digitsOnly =
-          _correctOcrDigitMisreads(line).replaceAll(RegExp(r'[^0-9]'), '');
-      if (digitsOnly.isNotEmpty &&
-          digitsOnly.length == line.replaceAll(RegExp(r'\s'), '').length &&
-          digitsOnly.length >= 4 &&
-          digitsOnly.length <= 6) {
-        final val = int.tryParse(digitsOnly);
-        if (val != null && _isValidReadingRange(val)) {
-          digitOnlyCandidates.add(val);
+      if (_isImpulseLine(line)) continue;
+      if (RegExp(
+              r'(?:sr\.?\s*no|serial|p\.?o\.?\s*no|po\s*no|model|type|acc\.?cl|240v|50hz|warranty)',
+              caseSensitive: false)
+          .hasMatch(line)) {
+        continue;
+      }
+      final clean = _correctOcrDigitMisreads(line)
+          .replaceAll(RegExp(r'[^0-9.]'), '');
+      if (clean.isEmpty) continue;
+      final whole = clean.split('.').first;
+      final val = int.tryParse(whole);
+      if (val != null &&
+          _isValidReadingRange(val) &&
+          !_isCommonSpecNumber(val)) {
+        final len = _digitLength(val);
+        if (len >= 4 && len <= 7) {
+          candidates.add(val);
         }
       }
     }
-    if (digitOnlyCandidates.length == 1) {
-      return digitOnlyCandidates.first;
+
+    if (candidates.isNotEmpty) {
+      // Pick the longest number run (e.g. 130018 or 183041)
+      candidates.sort(
+          (a, b) => b.toString().length.compareTo(a.toString().length));
+      return candidates.first;
     }
 
     return null;
   }
 
+  bool _isImpulseLine(String line) {
+    return RegExp(r'(?:imp(?:ulse)?\s*(?:/|\b)|\bimp\b|\b\d+\s*imp)',
+            caseSensitive: false)
+        .hasMatch(line);
+  }
+
+  bool _isCommonSpecNumber(int num) {
+    if (num >= 2014 && num <= 2030) return true; // Years
+    if (num == 220 || num == 230 || num == 240 || num == 250) return true; // Voltage
+    if (num == 50 || num == 60) return true; // Hz
+    if (num == 1000 ||
+        num == 1200 ||
+        num == 1600 ||
+        num == 2000 ||
+        num == 2400 ||
+        num == 3200 ||
+        num == 6400) return true; // Impulse constants
+    return false;
+  }
+
   int _digitLength(int value) => value.abs().toString().length;
 
   int? _extractKwhValue(String line) {
+    if (_isImpulseLine(line)) return null;
+
     const digitChars = r'[0-9OoIiLlSsZzBb\s.,]{3,14}';
     final patterns = [
       RegExp(
-        '(?:k\\s*\\.?\\s*w\\s*\\.?\\s*h|kw/h)\\s*[:=\\-]?\\s*($digitChars)',
+        '($digitChars)\\s*(?:k\\s*\\.?\\s*w\\s*\\.?\\s*h|kw/h)',
         caseSensitive: false,
       ),
       RegExp(
-        '($digitChars)\\s*(?:k\\s*\\.?\\s*w\\s*\\.?\\s*h|kw/h)',
+        '(?:k\\s*\\.?\\s*w\\s*\\.?\\s*h|kw/h)\\s*[:=\\-]?\\s*($digitChars)',
         caseSensitive: false,
       ),
     ];
@@ -303,14 +317,15 @@ class OCRService {
       final match = pattern.firstMatch(line);
       final rawValue = match?.group(1);
       if (rawValue == null) continue;
-      // Meter LCDs often show a fractional digit (e.g. 1811.25 kWh). The
-      // app stores whole kWh, so keep the integer part instead of allowing
-      // OCR to skip it and mistakenly save only the fraction, such as 12.
       final normalized =
           _correctOcrDigitMisreads(rawValue).replaceAll(RegExp(r'\s+'), '');
       final wholeKwh = normalized.split(RegExp(r'[.,]')).first;
       final value = int.tryParse(wholeKwh);
-      if (value != null && _isValidReadingRange(value)) return value;
+      if (value != null &&
+          _isValidReadingRange(value) &&
+          !_isCommonSpecNumber(value)) {
+        return value;
+      }
     }
     return null;
   }
@@ -341,37 +356,52 @@ class OCRService {
     return null;
   }
 
-  /// Extracts meter serial number (e.g., S-P 86361 or 792623).
+  /// Extracts meter serial number (e.g., 792623 or F-088361).
   String? _extractMeterNo(List<String> lines, String fullText) {
-    // Prefer values next to a bill's meter/serial label. A broad greedy match
-    // can swallow the rest of an OCR line and miss the actual meter number.
+    // 1. Check barcode prefixes common in Pakistan (PEL 00000000792623, WML0000000088361)
+    final barcodeMatch = RegExp(
+            r'(?:PEL|WML|KB|MTI|SP)\s*(?:0+)?([1-9]\d{4,8})',
+            caseSensitive: false)
+        .firstMatch(fullText);
+    if (barcodeMatch != null) {
+      return barcodeMatch.group(1);
+    }
+
+    // 2. Explicit Sr. No / Meter No label
     final serialLabelRegex = RegExp(
-        r'(?:s\.?\s*r\.?\s*no|sr\.?\s*no|serial\s*(?:no|number)?|meter\s*(?:no|number)?|m\.?\s*no|s/n)\s*[:.\-#]?\s*([A-Z0-9][A-Z0-9\s\-]{2,16})',
+        r'(?:s\.?\s*r\.?\s*no|sr\.?\s*no|serial\s*(?:no|number)?|meter\s*(?:no|number)?|m\.?\s*no|s/n)\s*[:.\-#]?\s*([A-Za-z0-9\-]{4,16})',
         caseSensitive: false);
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
+      if (RegExp(r'kwh', caseSensitive: false).hasMatch(line)) continue;
+
       final match = serialLabelRegex.firstMatch(line);
       if (match != null) {
         final candidate = _normaliseSerialCandidate(match.group(1));
-        if (candidate != null) return candidate;
+        if (candidate != null &&
+            !_isCommonSpecNumber(int.tryParse(candidate) ?? 0)) {
+          return candidate;
+        }
       }
 
-      if (RegExp(r'(?:s\.?\s*r\.?\s*no|sr\.?\s*no|serial|meter\s*(?:no|number)?|m\.?\s*no|s/n)',
+      if (RegExp(r'(?:s\.?\s*r\.?\s*no|sr\.?\s*no|serial\s*no|meter\s*no)',
                   caseSensitive: false)
               .hasMatch(line) &&
           i + 1 < lines.length) {
         final candidate = _normaliseSerialCandidate(lines[i + 1]);
-        if (candidate != null) return candidate;
+        if (candidate != null &&
+            !_isCommonSpecNumber(int.tryParse(candidate) ?? 0)) {
+          return candidate;
+        }
       }
     }
 
-    // 2. Look for numeric patterns that look like serial numbers (5-9 digits)
-    final serialRegex = RegExp(r'\b\d{5,9}\b');
-    final matches = serialRegex.allMatches(fullText);
-    for (final match in matches) {
-      final val = match.group(0);
-      if (val != null) return val;
+    // 3. F-088361 pattern (WOSCO / FESCO meters)
+    final fCodeMatch = RegExp(r'\b(F\s*[-–]\s*\d{5,8})\b', caseSensitive: false)
+        .firstMatch(fullText);
+    if (fCodeMatch != null) {
+      return fCodeMatch.group(1)!.replaceAll(RegExp(r'\s+'), '');
     }
 
     return null;
