@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
-import 'dashboard_screen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({
@@ -93,10 +92,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       await _showSuccessDialog();
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        (_) => false,
-      );
+      // Pop everything — _AuthGate will see isOtpVerified()==true and show Dashboard
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (error) {
       _clearCode(markInvalid: true);
       _show(AuthService.messageFor(error));
@@ -118,12 +115,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       );
       if (!mounted) return;
       _clearCode();
-      _startCooldown(60);
+      _startCooldown(45);
       _show(isInitial
           ? 'Verification code sent to ${widget.email}'
           : 'New code sent to ${widget.email}');
     } catch (error) {
-      _show(_messageFor(error));
+      // Show error whether initial or resend
+      if (mounted) _show(_messageFor(error));
+      // Still start cooldown so user doesn't spam requests
+      _startCooldown(30);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

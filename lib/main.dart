@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/otp_verification_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
@@ -41,8 +42,8 @@ class _MeterUnitAppState extends State<MeterUnitApp> {
         title: 'MeterPro',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: _themeProvider.mode,
+        darkTheme: AppTheme.light,
+        themeMode: ThemeMode.light,
         home: _SplashGate(themeProvider: _themeProvider),
       ),
     );
@@ -76,17 +77,36 @@ class _AuthGate extends StatelessWidget {
     return StreamBuilder(
       stream: AuthService.instance.authStateChanges,
       builder: (context, snapshot) {
+        // Still loading auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         final user = snapshot.data;
+        // Not logged in — show login
         if (user == null) return const LoginScreen();
+
+        // Logged in — check OTP verification
         return FutureBuilder<bool>(
           future: AuthService.instance.isOtpVerified(),
           builder: (context, verified) {
             if (verified.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
             }
-            return verified.data == true
-                ? DashboardScreen(themeProvider: themeProvider)
-                : const LoginScreen();
+            if (verified.data == true) {
+              // Fully verified — go to dashboard
+              return DashboardScreen(themeProvider: themeProvider);
+            }
+            // Logged in but NOT verified — show OTP screen
+            // sendInitialCode: true so a fresh code is sent automatically
+            return OtpVerificationScreen(
+              email: user.email ?? '',
+              sendInitialCode: true,
+            );
           },
         );
       },
