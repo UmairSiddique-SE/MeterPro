@@ -138,7 +138,11 @@ exports.verifyEmailOtp = onCall(
       throw new HttpsError('permission-denied', 'Invalid or expired code.');
     }
 
-    await admin.auth().setCustomUserClaims(uid, {emailOtpVerified: true});
+    const userRecord = await admin.auth().getUser(uid);
+    await admin.auth().setCustomUserClaims(uid, {
+      ...(userRecord.customClaims || {}),
+      emailOtpVerified: true,
+    });
     return {verified: true};
   },
 );
