@@ -212,8 +212,8 @@ class MeterReadingLog {
 
   /// Units consumed for this specific log entry cycle:
   int get consumedUnitsKwh {
-    if (baseReadingKwh <= 0) return 0;
-    return (readingKwh - baseReadingKwh).clamp(0, 999999);
+    final base = baseReadingKwh > 0 ? baseReadingKwh : readingKwh;
+    return (readingKwh - base).clamp(0, 999999);
   }
 
   Map<String, dynamic> toMap() => {
@@ -226,7 +226,10 @@ class MeterReadingLog {
 
   factory MeterReadingLog.fromMap(Map<String, dynamic> map) {
     final reading = (map['readingKwh'] as num?)?.toInt() ?? 0;
-    final base = (map['baseReadingKwh'] as num?)?.toInt() ?? reading;
+    var base = (map['baseReadingKwh'] as num?)?.toInt() ?? 0;
+    if (base <= 0) {
+      base = reading;
+    }
     return MeterReadingLog(
       id: map['id'] as String? ?? '',
       readingKwh: reading,

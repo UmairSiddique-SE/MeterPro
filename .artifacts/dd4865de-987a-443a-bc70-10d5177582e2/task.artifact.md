@@ -1,5 +1,5 @@
-# Task List - Notification Settings Sheet
+# Task List - Professional Usage Charts & Actual Reading Events
 
-- [ ] Create `NotificationSettingsSheet` widget in `lib/widgets/notification_settings_sheet.dart` with ON/OFF toggle, time picker, and professional UI design.
-- [ ] Update notification button handler in `lib/screens/dashboard_screen.dart` to open `NotificationSettingsSheet`.
-- [ ] Verify project builds and analyzes cleanly with `flutter analyze`.
+- [ ] Improve `consumedUnitsKwh` calculation in `MeterReadingLog` (`lib/models/meter.dart`)
+- [ ] Refactor `_buildChartPoints` in `UsageScreen` (`lib/screens/usage_screen.dart`) for Daily view to plot actual reading log events
+- [ ] Verify build and functionality with `flutter analyze`

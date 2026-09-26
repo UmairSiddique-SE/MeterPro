@@ -1,35 +1,34 @@
-# Implementation Plan - Notification Reminders & Time Picker
+# Implementation Plan - Professional Usage Charts & Actual Reading Events (Daily View)
 
-Implement a professional bottom sheet widget for notification settings where users can toggle notifications ON/OFF and select a custom reminder time for "Check meter reading" reminders.
+Refactor the Usage screen (`UsageScreen`) so that the **Daily** view displays chart bars strictly based on **actual reading log events** ("jab jab reading li ho wo nazar ay, all day ki nahi") rather than static calendar days, and ensure consumed units are calculated accurately.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Notification Settings Bottom Sheet**: Clicking the notification bell on the dashboard will open a professional bottom sheet UI.
-> - **Features**:
->   - Toggle Notification ON/OFF switch.
->   - Time Picker to select reminder time.
->   - Persistence and scheduling via `ReminderService`.
+> - **Daily View Refactor**: In the Daily tab, the consumption chart will plot data points corresponding precisely to the exact timestamps and consumed units of when meter readings were recorded.
+> - **Accurate Consumption Calculation**: Ensure `consumedUnitsKwh` for log entries correctly accounts for previous base readings to prevent incorrect large unit numbers (like `+13109 Units`).
 
 ## Open Questions
 
-None. The user requirements are clear ("notification par click kary to option hy notifictaion of and notifiction tume phir os time par remonder ajay chaek meter reading sahi professional wala semnn bana dena").
+None.
 
 ## Proposed Changes
 
-### Notification Settings Sheet & Dashboard Integration
+### Models & Usage Screen
 
-#### [NEW] [notification_settings_sheet.dart](file:///D:/Project/meterpro/lib/widgets/notification_settings_sheet.dart)
-- Create a professional modal bottom sheet component (`NotificationSettingsSheet`) using `ReminderService` to load and save settings (enable/disable toggle and time picker).
+#### [MODIFY] [meter.dart](file:///D:/Project/meterpro/lib/models/meter.dart)
+- Improve `consumedUnitsKwh` calculation in `MeterReadingLog` so that if `baseReadingKwh` is 0 or less, it falls back gracefully to the previous log reading or meter baseline.
 
-#### [MODIFY] [dashboard_screen.dart](file:///D:/Project/meterpro/lib/screens/dashboard_screen.dart)
-- Update the notification button tap handler to display `NotificationSettingsSheet` instead of the placeholder dialog.
+#### [MODIFY] [usage_screen.dart](file:///D:/Project/meterpro/lib/screens/usage_screen.dart)
+- Update `_buildChartPoints` for Daily view (`tab == 0`) to collect actual reading logs (`allLogs`) and generate chart points from each recorded reading event (`log.timestamp`, `log.consumedUnitsKwh`).
+- For Weekly view (`tab == 1`), maintain clean weekly period grouping.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `flutter analyze` to ensure zero compilation errors or warnings.
+- Run `flutter analyze` to ensure zero compilation errors.
 
 ### Manual Verification
-- Tap notification bell on dashboard.
-- Verify notification toggle works, time picker works, and saving correctly schedules the notification.
+- Navigate to the Usage screen.
+- Verify Daily tab displays bars only for actual reading dates with correct consumed units.
+- Verify Weekly tab displays weekly breakdown cleanly.
