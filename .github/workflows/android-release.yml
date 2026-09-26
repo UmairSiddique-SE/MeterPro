@@ -36,6 +36,28 @@ jobs:
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/MeterPro.apk
 
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update version.json on main branch
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git fetch origin main
+          git checkout main
+          cat > version.json << EOF
+          {
+            "latest_version": "${{ steps.get_version.outputs.VERSION }}",
+            "download_url": "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk",
+            "release_notes": "New version ${{ steps.get_version.outputs.VERSION }} available with improvements and bug fixes.",
+            "force_update": false
+          }
+          EOF
+          git add version.json
+          git commit -m "chore: bump version.json to ${{ steps.get_version.outputs.VERSION }} [skip ci]" || echo "Nothing to commit"
+          git push origin main
+
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:

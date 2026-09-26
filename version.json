@@ -1,4 +1,6 @@
 {
-    "download_url":  "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk",
-    "latest_version":  "1.0.5"
+  "latest_version": "1.0.5",
+  "download_url": "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk",
+  "release_notes": "MeterPro is now available with improved meter reading, usage charts, and bill management.",
+  "force_update": false
 }
