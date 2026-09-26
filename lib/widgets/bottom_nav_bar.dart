@@ -21,8 +21,8 @@ class MWBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bg = Color(0xFF0F172A); // Rich professional dark slate background
-    const border = Color(0xFF1E293B);
+    const bg = Color(0xFF1E293B); // Rich professional blue-slate background
+    const border = Color(0xFF334155);
 
     return Container(
       decoration: const BoxDecoration(
@@ -30,7 +30,7 @@ class MWBottomNavBar extends StatelessWidget {
         border: Border(top: BorderSide(color: border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black26,
+            color: Colors.black38,
             blurRadius: 20,
             offset: Offset(0, -6),
           ),
@@ -102,40 +102,57 @@ class _NavItem extends StatelessWidget {
         onTap();
       },
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedScale(
-            scale: selected ? 1.08 : 1.0,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutBack,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              decoration: BoxDecoration(
-                color: selected ? activeBgColor : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: selected ? 1.0 : 0.0),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        builder: (context, animValue, child) {
+          return Transform.translate(
+            offset: Offset(0, -4.0 * animValue),
+            child: child,
+          );
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedScale(
+              scale: selected ? 1.12 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: selected ? activeBgColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: activeBgColor.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? activeColor : inactiveColor,
+                ),
               ),
-              child: Icon(
-                icon,
-                size: 20,
+            ),
+            const SizedBox(height: 2),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: selected ? activeColor : inactiveColor,
               ),
+              child: Text(label),
             ),
-          ),
-          const SizedBox(height: 2),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: GoogleFonts.inter(
-              fontSize: 9.5,
-              fontWeight:
-                  selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? activeColor : inactiveColor,
-            ),
-            child: Text(label),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
