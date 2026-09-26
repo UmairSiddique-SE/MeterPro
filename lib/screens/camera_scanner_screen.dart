@@ -378,15 +378,16 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
                 _meterNoCtrl.text = scannedSerial;
               }
 
+              final matchedReg = _isMeterLookup ? _findMatchingRegisteredMeter(result) : null;
               if (_isMeterLookup &&
                   !_hasReturnedMatch &&
-                  _isRegisteredMeter(scannedSerial)) {
+                  matchedReg != null) {
                 _hasReturnedMatch = true;
                 _lookupTimeout?.cancel();
-                Future<void>.delayed(const Duration(milliseconds: 450), () {
+                Future<void>.delayed(const Duration(milliseconds: 350), () {
                   if (!mounted) return;
                   Navigator.of(context).pop(OCRScanResult(
-                    meterNo: scannedSerial,
+                    meterNo: matchedReg,
                     meterReading: result.meterReading,
                     rawText: result.rawText,
                     detectedLines: result.detectedLines,
@@ -598,10 +599,41 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
   bool _isRegisteredMeter(String? serial) {
     if (serial == null) return false;
     final normalized = _normaliseSerial(serial);
-    return normalized.isNotEmpty &&
-        widget.registeredMeterNumbers
-            .map(_normaliseSerial)
-            .contains(normalized);
+    if (normalized.isEmpty) return false;
+    for (final reg in widget.registeredMeterNumbers) {
+      final regNorm = _normaliseSerial(reg);
+      if (regNorm.isEmpty) continue;
+      if (normalized == regNorm ||
+          (normalized.length >= 4 && regNorm.contains(normalized)) ||
+          (regNorm.length >= 4 && normalized.contains(regNorm))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String? _findMatchingRegisteredMeter(OCRScanResult result) {
+    if (widget.registeredMeterNumbers.isEmpty) return null;
+
+    final scannedSerial = _serialFromResult(result);
+    if (_isRegisteredMeter(scannedSerial)) return scannedSerial;
+
+    if (_isRegisteredMeter(result.referenceNo)) return result.referenceNo;
+
+    for (final line in result.detectedLines) {
+      final clean = _normaliseSerial(line);
+      if (clean.length < 4) continue;
+      for (final reg in widget.registeredMeterNumbers) {
+        final cleanReg = _normaliseSerial(reg);
+        if (cleanReg.isNotEmpty &&
+            (clean == cleanReg ||
+                clean.contains(cleanReg) ||
+                cleanReg.contains(clean))) {
+          return reg;
+        }
+      }
+    }
+    return null;
   }
 
   void _showNoMeterMatch() {

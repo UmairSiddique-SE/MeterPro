@@ -73,30 +73,180 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (meters.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Add a meter first, then use quick scan.')),
+            content: Text('Please add a meter first before scanning.')),
       );
       return;
     }
+
+    final registeredIdentifiers = <String>[];
+    for (final m in meters) {
+      if (m.meterNo.trim().isNotEmpty) registeredIdentifiers.add(m.meterNo);
+      if (m.referenceNo.trim().isNotEmpty) registeredIdentifiers.add(m.referenceNo);
+      if (m.consumerNo.trim().isNotEmpty) registeredIdentifiers.add(m.consumerNo);
+    }
+
     final result = await Navigator.of(context).push<OCRScanResult>(
       MaterialPageRoute(
         builder: (_) => CameraScannerScreen(
-          registeredMeterNumbers: meters.map((meter) => meter.meterNo).toList(),
-          scanSerialOnly: true,
+          registeredMeterNumbers: registeredIdentifiers,
+          scanSerialOnly: false,
+          allowUnregisteredMeter: meters.length == 1,
         ),
       ),
     );
-    if (!context.mounted || result?.meterNo == null) return;
-    final scanned =
-        result!.meterNo!.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
-    final matches = meters.where((meter) =>
-        meter.meterNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase() ==
-        scanned);
-    if (matches.isNotEmpty) {
+
+    if (!context.mounted || result == null) return;
+
+    MeterModel? matched;
+
+    if (meters.length == 1) {
+      matched = meters.first;
+    } else {
+      final scannedNo = result.meterNo?.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase() ?? '';
+      final scannedRef = result.referenceNo?.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase() ?? '';
+
+      for (final m in meters) {
+        final mNo = m.meterNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+        final refNo = m.referenceNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+        final cNo = m.consumerNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+
+        if (scannedNo.isNotEmpty &&
+            ((mNo.isNotEmpty && (mNo == scannedNo || mNo.contains(scannedNo) || scannedNo.contains(mNo))) ||
+             (refNo.isNotEmpty && (refNo == scannedNo || refNo.contains(scannedNo) || scannedNo.contains(refNo))) ||
+             (cNo.isNotEmpty && (cNo == scannedNo || cNo.contains(scannedNo) || scannedNo.contains(cNo))))) {
+          matched = m;
+          break;
+        }
+
+        if (scannedRef.isNotEmpty &&
+            ((refNo.isNotEmpty && (refNo == scannedRef || refNo.contains(scannedRef) || scannedRef.contains(refNo))) ||
+             (mNo.isNotEmpty && (mNo == scannedRef || mNo.contains(scannedRef) || scannedRef.contains(mNo))))) {
+          matched = m;
+          break;
+        }
+      }
+
+      if (matched == null) {
+        for (final line in result.detectedLines) {
+          final cleanLine = line.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+          if (cleanLine.length < 4) continue;
+          for (final m in meters) {
+            final mNo = m.meterNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+            final refNo = m.referenceNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+            if ((mNo.isNotEmpty && cleanLine.contains(mNo)) ||
+                (refNo.isNotEmpty && cleanLine.contains(refNo))) {
+              matched = m;
+              break;
+            }
+          }
+          if (matched != null) break;
+        }
+      }
+    }
+
+    if (matched != null) {
       Navigator.of(context).push(
         MaterialPageRoute(
-            builder: (_) => MeterDetailScreen(meter: matches.first)),
+          builder: (_) => MeterDetailScreen(
+            meter: matched!,
+            initialReading: result.meterReading,
+          ),
+        ),
       );
+    } else {
+      _showMeterSelectionSheet(context, meters, result.meterReading);
     }
+  }
+
+  void _showMeterSelectionSheet(
+      BuildContext context, List<MeterModel> meters, int? reading) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Select Meter',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                reading != null
+                    ? 'Detected reading: $reading kWh. Select meter to apply:'
+                    : 'Select the meter you want to open:',
+                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: meters.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (ctx, i) {
+                    final m = meters[i];
+                    return ListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        child: const Icon(Icons.electric_meter_outlined,
+                            color: AppColors.primary),
+                      ),
+                      title: Text(
+                        m.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'Ref: ${m.referenceNo} • ${m.presentReadingKwh} kWh',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textMuted),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                          size: 14, color: AppColors.textMuted),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MeterDetailScreen(
+                              meter: m,
+                              initialReading: reading,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<bool> _showExitDialog() async {

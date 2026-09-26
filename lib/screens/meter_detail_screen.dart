@@ -14,11 +14,13 @@ final _pkrDec =
 class MeterDetailScreen extends StatefulWidget {
   final MeterModel meter;
   final bool openReadingEditor;
+  final int? initialReading;
 
   const MeterDetailScreen({
     super.key,
     required this.meter,
     this.openReadingEditor = false,
+    this.initialReading,
   });
 
   @override
@@ -34,16 +36,18 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
   void initState() {
     super.initState();
     _meter = widget.meter;
-    if (widget.openReadingEditor) {
+    if (widget.openReadingEditor || widget.initialReading != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showManualEntrySheet();
+        if (mounted) _showManualEntrySheet(initialValue: widget.initialReading);
       });
     }
   }
 
 
-  Future<void> _showManualEntrySheet() async {
-    final TextEditingController readingCtrl = TextEditingController();
+  Future<void> _showManualEntrySheet({int? initialValue}) async {
+    final TextEditingController readingCtrl = TextEditingController(
+      text: initialValue != null ? initialValue.toString() : '',
+    );
     if (!mounted) return;
 
     showModalBottomSheet(
@@ -1213,21 +1217,28 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                               builder: (context) {
                                 final maxUnit = displayUnits.fold<int>(
                                     1, (a, b) => a > b ? a : b);
-                                final chartMaxY =
-                                    (maxUnit * 1.35).clamp(10.0, 999999.0);
 
-                                double chartInterval = 20;
-                                if (chartMaxY <= 25) {
+                                double chartInterval;
+                                if (maxUnit <= 20) {
                                   chartInterval = 5;
-                                } else if (chartMaxY <= 60) {
+                                } else if (maxUnit <= 50) {
                                   chartInterval = 10;
-                                } else if (chartMaxY <= 150) {
+                                } else if (maxUnit <= 120) {
                                   chartInterval = 25;
-                                } else if (chartMaxY <= 300) {
+                                } else if (maxUnit <= 250) {
                                   chartInterval = 50;
-                                } else {
+                                } else if (maxUnit <= 600) {
                                   chartInterval = 100;
+                                } else if (maxUnit <= 1500) {
+                                  chartInterval = 250;
+                                } else if (maxUnit <= 3000) {
+                                  chartInterval = 500;
+                                } else {
+                                  chartInterval = (maxUnit / 4).ceilToDouble();
                                 }
+
+                                final chartMaxY = (((maxUnit * 1.3) / chartInterval).ceil() * chartInterval)
+                                    .clamp(chartInterval * 2, 999999.0);
 
                                 return BarChart(
                                   BarChartData(
@@ -1237,12 +1248,12 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                                     barTouchData: BarTouchData(
                                       enabled: true,
                                       touchTooltipData: BarTouchTooltipData(
-                                        getTooltipColor: (_) => AppColors.primary,
+                                        getTooltipColor: (_) => const Color(0xFF0F172A),
                                         tooltipPadding:
                                             const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 8),
                                         tooltipBorderRadius:
-                                            BorderRadius.circular(12),
+                                            BorderRadius.circular(10),
                                         getTooltipItem: (group, groupIndex, rod,
                                             rodIndex) {
                                           final log =
@@ -1253,7 +1264,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                                             const TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 14,
+                                              fontSize: 13,
                                             ),
                                             children: [
                                               TextSpan(
@@ -1275,7 +1286,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                                       drawVerticalLine: false,
                                       horizontalInterval: chartInterval,
                                       getDrawingHorizontalLine: (value) => FlLine(
-                                        color: Colors.grey.withValues(alpha: 0.08),
+                                        color: Colors.grey.withValues(alpha: 0.12),
                                         strokeWidth: 1,
                                       ),
                                     ),
@@ -1291,20 +1302,31 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                                         sideTitles: SideTitles(
                                           showTitles: true,
                                           interval: chartInterval,
-                                          reservedSize: 34,
+                                          reservedSize: 44,
                                           getTitlesWidget: (v, meta) {
                                             if (v > chartMaxY || v < 0) {
                                               return const SizedBox();
                                             }
+                                            final intVal = v.toInt();
+                                            if (intVal % chartInterval.toInt() != 0) {
+                                              return const SizedBox();
+                                            }
+                                            String label;
+                                            if (intVal >= 1000) {
+                                              final kVal = intVal / 1000;
+                                              label = '${kVal.toStringAsFixed(intVal % 1000 == 0 ? 0 : 1)}k';
+                                            } else {
+                                              label = intVal.toString();
+                                            }
                                             return SideTitleWidget(
                                               meta: meta,
-                                              space: 4,
+                                              space: 6,
                                               child: Text(
-                                                v.toInt().toString(),
+                                                label,
                                                 style: GoogleFonts.inter(
-                                                    fontSize: 9.5,
+                                                    fontSize: 10,
                                                     fontWeight: FontWeight.w600,
-                                                    color: AppColors.textMuted),
+                                                    color: AppColors.lightTextMuted),
                                               ),
                                             );
                                           },
@@ -1504,23 +1526,29 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                       children: [
                         Text(
                           '${log.readingKwh} kWh',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            color: const Color(0xFF0F172A),
+                          ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color:
                                 AppColors.accentGreen.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: AppColors.accentGreen.withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Text(
-                            '+$unitsToShow kWh',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                            '+$unitsToShow Units',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.accentGreen,
                             ),
                           ),
@@ -1529,7 +1557,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                         IconButton(
                           onPressed: () => _showEditReadingDialog(log),
                           icon: const Icon(Icons.edit_outlined,
-                              size: 14, color: AppColors.primary),
+                              size: 15, color: AppColors.primary),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
