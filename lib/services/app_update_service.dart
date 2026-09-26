@@ -150,9 +150,44 @@ class AppUpdateService {
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       final uri = Uri.tryParse(update.apkUrl);
-                      if (uri != null && await canLaunchUrl(uri)) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
+                      if (uri == null ||
+                          uri.scheme != 'https' ||
+                          uri.host != 'github.com' ||
+                          !uri.path.startsWith(
+                            '/UmairSiddique-SE/MeterPro/releases/',
+                          )) {
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(
+                          const SnackBar(
+                            content: Text('The update download link is invalid.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      try {
+                        final launched = await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                        if (!launched && dialogContext.mounted) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Could not open the download link. Please try again.',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (_) {
+                        if (dialogContext.mounted) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Could not open the download link. Please try again.',
+                              ),
+                            ),
+                          );
+                        }
                       }
                     },
                     icon: const Icon(Icons.download_rounded),
