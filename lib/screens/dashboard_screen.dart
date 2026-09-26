@@ -394,7 +394,6 @@ class _DashboardHome extends StatelessWidget {
         final meters = snapshot.data ?? const <MeterModel>[];
         final loading = snapshot.connectionState == ConnectionState.waiting;
 
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         return SafeArea(
           child: CustomScrollView(
             slivers: [
@@ -433,30 +432,41 @@ class _DashboardHome extends StatelessWidget {
                           ),
                           Row(
                             children: [
-                              // Theme toggle
-                              if (themeProvider != null)
-                                GestureDetector(
-                                  onTap: themeProvider!.toggle,
-                                  child: Container(
-                                    width: 36,
-                                    height: 36,
-                                    margin: const EdgeInsets.only(right: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.15),
-                                      ),
+                              // Notification button
+                              GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Notifications'),
+                                      content: const Text('No new notifications. All meter readings are up to date!'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(ctx).pop(),
+                                          child: const Text('Close'),
+                                        ),
+                                      ],
                                     ),
-                                    child: Icon(
-                                      isDark
-                                          ? Icons.light_mode_rounded
-                                          : Icons.dark_mode_rounded,
-                                      color: Colors.white,
-                                      size: 18,
+                                  );
+                                },
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.15),
                                     ),
                                   ),
+                                  child: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
                                 ),
+                              ),
                               InkWell(
                                 onTap: onOpenProfile,
                                 borderRadius: BorderRadius.circular(22),

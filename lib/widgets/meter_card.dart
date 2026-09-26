@@ -133,11 +133,11 @@ class MeterCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Last: ${DateFormat('hh:mm a').format(latestTime)}',
+                  'Last: ${DateFormat('dd MMM').format(latestTime)}',
                   style: GoogleFonts.inter(
                     fontSize: 8,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textMuted,
+                    color: AppColors.primary,
                   ),
                 ),
               ],
