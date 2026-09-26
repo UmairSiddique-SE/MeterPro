@@ -147,22 +147,41 @@ class ReminderService {
         iOS: iosDetails,
       );
 
-      await _localNotifications.zonedSchedule(
-        1,
-        'Check your meter reading',
-        settings.billReminders && settings.highUsageAlert
-            ? 'Your meter reminder is ready. Check reading and usage.'
-            : 'Time to check your meter reading.',
-        scheduled,
-        details,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: settings.frequency == 'Weekly'
-            ? DateTimeComponents.dayOfWeekAndTime
-            : DateTimeComponents.time,
-        payload: 'meterpro_reminder',
-      );
+      try {
+        await _localNotifications.zonedSchedule(
+          1,
+          'Check your meter reading',
+          settings.billReminders && settings.highUsageAlert
+              ? 'Your meter reminder is ready. Check reading and usage.'
+              : 'Time to check your meter reading.',
+          scheduled,
+          details,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: settings.frequency == 'Weekly'
+              ? DateTimeComponents.dayOfWeekAndTime
+              : DateTimeComponents.time,
+          payload: 'meterpro_reminder',
+        );
+      } catch (_) {
+        await _localNotifications.zonedSchedule(
+          1,
+          'Check your meter reading',
+          settings.billReminders && settings.highUsageAlert
+              ? 'Your meter reminder is ready. Check reading and usage.'
+              : 'Time to check your meter reading.',
+          scheduled,
+          details,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: settings.frequency == 'Weekly'
+              ? DateTimeComponents.dayOfWeekAndTime
+              : DateTimeComponents.time,
+          payload: 'meterpro_reminder',
+        );
+      }
     } catch (e) {
       debugPrint('Error scheduling notification: $e');
     }
