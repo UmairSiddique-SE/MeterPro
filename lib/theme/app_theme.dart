@@ -80,7 +80,7 @@ class AppColors {
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF1E40AF)],
+    colors: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1D4ED8)],
   );
 
   static const LinearGradient premiumGradient = LinearGradient(
