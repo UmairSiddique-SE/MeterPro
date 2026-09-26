@@ -25,14 +25,14 @@ class MWBottomNavBar extends StatelessWidget {
     const border = Color(0xFF1E293B);
 
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: bg,
         border: Border(top: BorderSide(color: border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black26,
             blurRadius: 20,
-            offset: const Offset(0, -6),
+            offset: Offset(0, -6),
           ),
         ],
       ),
