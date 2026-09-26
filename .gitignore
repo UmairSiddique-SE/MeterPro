@@ -31,6 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/public/MeterPro.apk
 /coverage/
 
 # Firebase Functions local configuration / SMTP credentials

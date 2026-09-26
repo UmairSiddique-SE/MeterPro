@@ -1,6 +1,6 @@
 {
     "latest_version":  "1.0.6",
-    "download_url":  "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk",
+    "download_url":  "https://meterpro-official.web.app/MeterPro.apk",
     "release_notes":  "MeterPro 1.0.6 improves reliable reminders and restores scheduled notifications after app restarts and device reboots.",
     "force_update":  false
 }
