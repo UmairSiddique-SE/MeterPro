@@ -166,31 +166,21 @@ class _UsageScreenState extends State<UsageScreen>
   }
 
   List<_ChartPoint> _buildChartPoints(List<MeterModel> meters, int tab) {
-    List<_ChartPoint> points;
+    final allLogs = _collectLogs(meters);
     if (tab == 0) {
-      // Daily view: Show last 7 days of consumption deltas
-      final now = DateTime.now();
-      points = List.generate(7, (i) {
-        final date = DateTime(now.year, now.month, now.day)
-            .subtract(Duration(days: 6 - i));
-        final endOfDay =
-            date.add(const Duration(hours: 23, minutes: 59, seconds: 59));
-
-        double dailyUnits = 0;
-        for (final m in meters) {
-          dailyUnits += m.unitsInPeriod(date, endOfDay);
-        }
-
+      // Daily / Reading History view: Show actual recorded reading logs as chart bars
+      if (allLogs.isEmpty) return [];
+      return allLogs.map((log) {
         return _ChartPoint(
-          label: _dateFmt.format(date),
-          units: dailyUnits,
-          fullLabel: _fullFmt.format(date),
+          label: _dateFmt.format(log.timestamp),
+          units: log.consumedUnitsKwh.toDouble(),
+          fullLabel: '${_fullFmt.format(log.timestamp)} • Reading: ${log.readingKwh} kWh • +${log.consumedUnitsKwh} Units',
         );
-      });
+      }).toList();
     } else {
-      // Weekly view: Show last 4 weeks
+      // Weekly view: Show last 4 weeks aggregation
       final now = DateTime.now();
-      points = List.generate(4, (i) {
+      return List.generate(4, (i) {
         final start = DateTime(now.year, now.month, now.day)
             .subtract(Duration(days: (3 - i) * 7 + 6));
         final end = start.add(const Duration(days: 6, hours: 23, minutes: 59));
@@ -207,49 +197,6 @@ class _UsageScreenState extends State<UsageScreen>
         );
       });
     }
-
-    // If all period units are 0 but meters have registered consumption, fallback to distributed usage
-    final totalUnits =
-        meters.fold<double>(0.0, (s, m) => s + m.consumedUnitsKwh);
-    final hasAnyPeriodUnits = points.any((p) => p.units > 0);
-    if (!hasAnyPeriodUnits && totalUnits > 0) {
-      if (tab == 0) {
-        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        return List.generate(7, (i) {
-          double dayKwh = 0;
-          for (final m in meters) {
-            if (i < m.dailyUsage.length) {
-              dayKwh += m.dailyUsage[i].kwh;
-            } else {
-              dayKwh += (m.consumedUnitsKwh / 7.0);
-            }
-          }
-          return _ChartPoint(
-            label: dayNames[i],
-            units: dayKwh,
-            fullLabel: dayNames[i],
-          );
-        });
-      } else {
-        return List.generate(4, (i) {
-          double weekKwh = 0;
-          for (final m in meters) {
-            if (i < m.weeklyUsage.length) {
-              weekKwh += m.weeklyUsage[i].kwh;
-            } else {
-              weekKwh += (m.consumedUnitsKwh / 4.0);
-            }
-          }
-          return _ChartPoint(
-            label: 'W${i + 1}',
-            units: weekKwh,
-            fullLabel: 'Week ${i + 1}',
-          );
-        });
-      }
-    }
-
-    return points;
   }
 
   List<MeterReadingLog> _collectLogs(List<MeterModel> meters) {
