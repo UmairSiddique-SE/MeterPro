@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/meter.dart';
 import '../services/app_update_service.dart';
@@ -266,12 +267,12 @@ class _DashboardHome extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(greeting,
-                                  style: const TextStyle(
+                                  style: GoogleFonts.poppins(
                                       color: Colors.white70,
                                       fontSize: 22,
-                                      fontWeight: FontWeight.w700)),
+                                      fontWeight: FontWeight.w600)),
                               Text(displayName,
-                                  style: const TextStyle(
+                                  style: GoogleFonts.poppins(
                                       color: Colors.white,
                                       fontSize: 22,
                                       fontWeight: FontWeight.w800),

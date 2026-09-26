@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Build and Release Android APK
 
 on:
@@ -11,6 +12,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      KEYSTORE_BASE64: ${{ secrets.METERPRO_KEYSTORE_BASE64 }}
+      KEY_PROPERTIES: ${{ secrets.METERPRO_KEY_PROPERTIES }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,9 +27,6 @@ jobs:
 
       - name: Configure Keystore (if secrets provided)
         if: ${{ env.KEYSTORE_BASE64 != '' }}
-        env:
-          KEYSTORE_BASE64: ${{ secrets.METERPRO_KEYSTORE_BASE64 }}
-          KEY_PROPERTIES: ${{ secrets.METERPRO_KEY_PROPERTIES }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > android/meterpro-upload-key.jks
           echo "$KEY_PROPERTIES" > android/key.properties

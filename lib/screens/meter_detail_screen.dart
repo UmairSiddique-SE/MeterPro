@@ -1,11 +1,10 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/meter.dart';
 import '../services/meter_repository.dart';
-import '../services/ocr_service.dart';
 import '../theme/app_theme.dart';
-import 'camera_scanner_screen.dart';
 
 final _pkr =
     NumberFormat.currency(locale: 'en_US', symbol: 'Rs ', decimalDigits: 0);
@@ -42,33 +41,6 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
     }
   }
 
-  Future<void> _openCameraScanForReading() async {
-    final result = await Navigator.of(context).push<OCRScanResult>(
-      MaterialPageRoute(
-        builder: (_) => CameraScannerScreen(
-          expectedReferenceNo: _meter.meterNo,
-          minimumReading: _meter.previousReadingKwh > 0
-              ? _meter.previousReadingKwh
-              : null,
-        ),
-      ),
-    );
-    if (!mounted || result == null) return;
-
-    // Only use kWh reading — wait for it, don't accept garbage
-    final reading = result.meterReading;
-    if (reading == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'kWh reading not detected. Hold camera closer to LCD display.'),
-          backgroundColor: AppColors.accentRed,
-        ),
-      );
-      return;
-    }
-    await _applyNewReadingWithSource(reading, 'Camera Scan');
-  }
 
   Future<void> _showManualEntrySheet() async {
     final TextEditingController readingCtrl = TextEditingController();
@@ -106,38 +78,30 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Enter Meter Reading',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  InkWell(
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      await _openCameraScanForReading();
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.qr_code_scanner_rounded,
-                              size: 16, color: AppColors.primary),
-                          SizedBox(width: 4),
-                          Text(
-                            'Camera Scan',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.edit_note_rounded, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Manual Entry',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -740,25 +704,29 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
 
     // Build real unit progression spots from reading history sorted chronologically
     final historyLogsAsc = meter.readingHistory.reversed.toList();
-    final spots = <FlSpot>[];
-    for (var i = 0; i < historyLogsAsc.length; i++) {
-      spots.add(FlSpot(i.toDouble(), historyLogsAsc[i].readingKwh.toDouble()));
-    }
-    if (spots.isEmpty) {
-      spots.add(FlSpot(0, meter.previousReadingKwh.toDouble()));
-    }
 
-    // Take up to last 5 readings for a better trend view
+    // Take up to last 5 readings for a clean progression trend
     final displayHistory = historyLogsAsc.length > 5
         ? historyLogsAsc.sublist(historyLogsAsc.length - 5)
         : historyLogsAsc;
-    final displaySpots = <FlSpot>[];
+
+    final displayUnits = <int>[];
     for (var i = 0; i < displayHistory.length; i++) {
-      displaySpots
-          .add(FlSpot(i.toDouble(), displayHistory[i].readingKwh.toDouble()));
-    }
-    if (displaySpots.isEmpty) {
-      displaySpots.add(FlSpot(0, meter.previousReadingKwh.toDouble()));
+      if (i > 0) {
+        displayUnits.add(
+            (displayHistory[i].readingKwh - displayHistory[i - 1].readingKwh)
+                .clamp(0, 999999));
+      } else {
+        final base = displayHistory[0].baseReadingKwh > 0
+            ? displayHistory[0].baseReadingKwh
+            : meter.previousReadingKwh;
+        if (base > 0 && displayHistory[0].readingKwh > base) {
+          displayUnits
+              .add((displayHistory[0].readingKwh - base).clamp(0, 999999));
+        } else {
+          displayUnits.add(0);
+        }
+      }
     }
 
     return Scaffold(
@@ -1223,8 +1191,8 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                       ],
                     ),
                     child: SizedBox(
-                      height: 220,
-                      child: displaySpots.length < 2
+                      height: 230,
+                      child: displayUnits.isEmpty
                           ? const Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1233,7 +1201,7 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                                       size: 32, color: Colors.grey),
                                   SizedBox(height: 8),
                                   Text(
-                                    'Scan more readings to see trend',
+                                    'Add more readings to see trend',
                                     style: TextStyle(
                                         fontSize: 12,
                                         color: AppColors.textMuted),
@@ -1241,144 +1209,160 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                                 ],
                               ),
                             )
-                          : BarChart(
-                              BarChartData(
-                                alignment: BarChartAlignment.spaceAround,
-                                maxY: (displaySpots
-                                        .map((s) => s.y)
-                                        .reduce((a, b) => a > b ? a : b)) *
-                                    1.15,
-                                minY: (displaySpots
-                                        .map((s) => s.y)
-                                        .reduce((a, b) => a < b ? a : b)) *
-                                    0.9,
-                                barTouchData: BarTouchData(
-                                  enabled: true,
-                                  touchTooltipData: BarTouchTooltipData(
-                                    getTooltipColor: (_) => AppColors.primary,
-                                    tooltipPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    tooltipBorderRadius:
-                                        BorderRadius.circular(12),
-                                    getTooltipItem:
-                                        (group, groupIndex, rod, rodIndex) {
-                                      final log = displayHistory[groupIndex];
-                                      return BarTooltipItem(
-                                        '${rod.toY.toInt()} kWh\n',
-                                        const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                        children: [
-                                          TextSpan(
-                                            text: DateFormat('MMM dd, hh:mm a')
-                                                .format(log.timestamp),
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 10,
+                          : Builder(
+                              builder: (context) {
+                                final maxUnit = displayUnits.fold<int>(
+                                    1, (a, b) => a > b ? a : b);
+                                final chartMaxY =
+                                    (maxUnit * 1.35).clamp(10.0, 999999.0);
+
+                                double chartInterval = 20;
+                                if (chartMaxY <= 25) {
+                                  chartInterval = 5;
+                                } else if (chartMaxY <= 60) {
+                                  chartInterval = 10;
+                                } else if (chartMaxY <= 150) {
+                                  chartInterval = 25;
+                                } else if (chartMaxY <= 300) {
+                                  chartInterval = 50;
+                                } else {
+                                  chartInterval = 100;
+                                }
+
+                                return BarChart(
+                                  BarChartData(
+                                    alignment: BarChartAlignment.spaceAround,
+                                    maxY: chartMaxY,
+                                    minY: 0,
+                                    barTouchData: BarTouchData(
+                                      enabled: true,
+                                      touchTooltipData: BarTouchTooltipData(
+                                        getTooltipColor: (_) => AppColors.primary,
+                                        tooltipPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
+                                        tooltipBorderRadius:
+                                            BorderRadius.circular(12),
+                                        getTooltipItem: (group, groupIndex, rod,
+                                            rodIndex) {
+                                          final log =
+                                              displayHistory[groupIndex];
+                                          final consumed = rod.toY.toInt();
+                                          return BarTooltipItem(
+                                            '+$consumed Units\n',
+                                            const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
                                             ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                                gridData: FlGridData(
-                                  show: true,
-                                  drawVerticalLine: false,
-                                  horizontalInterval: 100,
-                                  getDrawingHorizontalLine: (value) => FlLine(
-                                    color: Colors.grey.withValues(alpha: 0.05),
-                                    strokeWidth: 1,
-                                  ),
-                                ),
-                                borderData: FlBorderData(show: false),
-                                titlesData: FlTitlesData(
-                                  topTitles: const AxisTitles(
-                                      sideTitles:
-                                          SideTitles(showTitles: false)),
-                                  rightTitles: const AxisTitles(
-                                      sideTitles:
-                                          SideTitles(showTitles: false)),
-                                  leftTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      reservedSize: 40,
-                                      getTitlesWidget: (v, meta) {
-                                        return Text(
-                                          v.toInt().toString(),
-                                          style: const TextStyle(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textMuted),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  bottomTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      reservedSize: 32,
-                                      getTitlesWidget: (v, meta) {
-                                        final idx = v.toInt();
-                                        if (idx < 0 ||
-                                            idx >= displayHistory.length) {
-                                          return const SizedBox();
-                                        }
-                                        final time =
-                                            displayHistory[idx].timestamp;
-                                        return Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 10),
-                                          child: Text(
-                                            DateFormat('dd/MM').format(time),
-                                            style: const TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppColors.textMuted),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                                barGroups: [
-                                  for (var i = 0; i < displaySpots.length; i++)
-                                    BarChartGroupData(
-                                      x: i,
-                                      barRods: [
-                                        BarChartRodData(
-                                          toY: displaySpots[i].y,
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              AppColors.primaryLight,
-                                              AppColors.primary
-                                                  .withValues(alpha: 0.7),
+                                            children: [
+                                              TextSpan(
+                                                text:
+                                                    '${log.readingKwh} kWh • ${DateFormat('dd MMM, hh:mm a').format(log.timestamp)}',
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontWeight: FontWeight.w500,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
                                             ],
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                          ),
-                                          width: 16,
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                  top: Radius.circular(6)),
-                                          backDrawRodData:
-                                              BackgroundBarChartRodData(
-                                            show: true,
-                                            toY: (displaySpots
-                                                    .map((s) => s.y)
-                                                    .reduce((a, b) =>
-                                                        a > b ? a : b)) *
-                                                1.15,
-                                            color: AppColors.background,
-                                          ),
-                                        ),
-                                      ],
+                                          );
+                                        },
+                                      ),
                                     ),
-                                ],
-                              ),
+                                    gridData: FlGridData(
+                                      show: true,
+                                      drawVerticalLine: false,
+                                      horizontalInterval: chartInterval,
+                                      getDrawingHorizontalLine: (value) => FlLine(
+                                        color: Colors.grey.withValues(alpha: 0.08),
+                                        strokeWidth: 1,
+                                      ),
+                                    ),
+                                    borderData: FlBorderData(show: false),
+                                    titlesData: FlTitlesData(
+                                      topTitles: const AxisTitles(
+                                          sideTitles:
+                                              SideTitles(showTitles: false)),
+                                      rightTitles: const AxisTitles(
+                                          sideTitles:
+                                              SideTitles(showTitles: false)),
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          interval: chartInterval,
+                                          reservedSize: 34,
+                                          getTitlesWidget: (v, meta) {
+                                            if (v > chartMaxY || v < 0) {
+                                              return const SizedBox();
+                                            }
+                                            return SideTitleWidget(
+                                              meta: meta,
+                                              space: 4,
+                                              child: Text(
+                                                v.toInt().toString(),
+                                                style: GoogleFonts.inter(
+                                                    fontSize: 9.5,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: AppColors.textMuted),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          reservedSize: 36,
+                                          getTitlesWidget: (v, meta) {
+                                            final idx = v.toInt();
+                                            if (idx < 0 ||
+                                                idx >= displayHistory.length) {
+                                              return const SizedBox();
+                                            }
+                                            final time =
+                                                displayHistory[idx].timestamp;
+                                            return SideTitleWidget(
+                                              meta: meta,
+                                              space: 8,
+                                              child: Text(
+                                                DateFormat('dd MMM').format(time),
+                                                style: GoogleFonts.inter(
+                                                    fontSize: 9.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: AppColors
+                                                        .lightTextPrimary),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    barGroups: [
+                                      for (var i = 0; i < displayUnits.length; i++)
+                                        BarChartGroupData(
+                                          x: i,
+                                          barRods: [
+                                            BarChartRodData(
+                                              toY: displayUnits[i].toDouble(),
+                                              gradient: AppColors.blueGradient,
+                                              width: 18,
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                      top: Radius.circular(8)),
+                                              backDrawRodData:
+                                                  BackgroundBarChartRodData(
+                                                show: true,
+                                                toY: chartMaxY,
+                                                color: const Color(0xFFF1F5F9),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                     ),
                   ),
@@ -1410,10 +1394,18 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
                       _buildLogTile(
                           meter.readingHistory[i],
                           i < meter.readingHistory.length - 1
-                              ? meter.readingHistory[i].readingKwh -
-                                  meter.readingHistory[i + 1].readingKwh
-                              : meter.readingHistory[i].readingKwh -
-                                  meter.readingHistory[i].baseReadingKwh),
+                              ? (meter.readingHistory[i].readingKwh -
+                                      meter.readingHistory[i + 1].readingKwh)
+                                  .clamp(0, 999999)
+                              : (meter.readingHistory[i].baseReadingKwh > 0
+                                  ? (meter.readingHistory[i].readingKwh -
+                                          meter.readingHistory[i].baseReadingKwh)
+                                      .clamp(0, 999999)
+                                  : (meter.previousReadingKwh > 0
+                                      ? (meter.readingHistory[i].readingKwh -
+                                              meter.previousReadingKwh)
+                                          .clamp(0, 999999)
+                                      : 0))),
 
                   if (meter.readingHistory.length > 3)
                     Padding(
@@ -1572,8 +1564,8 @@ class _MeterDetailScreenState extends State<MeterDetailScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 44),
             child: Text(
-              'Base: ${log.baseReadingKwh} kWh • ${DateFormat('dd MMM yyyy, hh:mm a').format(log.timestamp)}',
-              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+              'Base: ${log.baseReadingKwh > 0 ? log.baseReadingKwh : _meter.previousReadingKwh} kWh • ${DateFormat('dd MMM yyyy, hh:mm a').format(log.timestamp)}',
+              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/meter.dart';
 import '../services/meter_repository.dart';
@@ -67,19 +68,26 @@ class _UsageScreenState extends State<UsageScreen>
           final startOfToday = DateTime(now.year, now.month, now.day);
           final endOfToday = startOfToday.add(const Duration(hours: 23, minutes: 59, seconds: 59));
           final startOfWeek = startOfToday.subtract(const Duration(days: 6));
-          final startOfMonth = DateTime(now.year, now.month, 1);
 
           final totalUnits =
               visibleMeters.fold<double>(0.0, (s, m) => s + m.consumedUnitsKwh);
-          final dailyUnits = visibleMeters.fold<double>(
-              0.0, (s, m) => s + m.unitsInPeriod(startOfToday, endOfToday));
-          final weekUnits = visibleMeters.fold<double>(
-              0.0, (s, m) => s + m.unitsInPeriod(startOfWeek, now));
-          final monthUnits = visibleMeters.fold<double>(
-              0.0, (s, m) => s + m.unitsInPeriod(startOfMonth, now));
-
           final chartPoints = _buildChartPoints(visibleMeters, _tab);
           final hasChart = chartPoints.length >= 2;
+
+          final periodPointsSum =
+              chartPoints.fold<double>(0.0, (s, p) => s + p.units);
+          final dailyUnits = _tab == 0
+              ? periodPointsSum
+              : visibleMeters.fold<double>(
+                  0.0, (s, m) => s + m.unitsInPeriod(startOfToday, endOfToday));
+          final weekUnits = _tab == 1
+              ? periodPointsSum
+              : visibleMeters.fold<double>(
+                  0.0, (s, m) => s + m.unitsInPeriod(startOfWeek, now));
+
+          final dailyAverage = now.day > 0
+              ? (totalUnits / now.day)
+              : (totalUnits / 30.0);
 
           return FadeTransition(
             opacity: _fadeIn,
@@ -91,7 +99,7 @@ class _UsageScreenState extends State<UsageScreen>
                     selectedMeterName: selectedMeter?.name,
                     totalUnits: totalUnits,
                     periodUnits: _tab == 0 ? dailyUnits : weekUnits,
-                    dailyAverage: monthUnits / (now.day), // Correct avg
+                    dailyAverage: dailyAverage,
                     isWeekly: _tab == 1,
                   ),
                 ),
@@ -158,12 +166,15 @@ class _UsageScreenState extends State<UsageScreen>
   }
 
   List<_ChartPoint> _buildChartPoints(List<MeterModel> meters, int tab) {
+    List<_ChartPoint> points;
     if (tab == 0) {
       // Daily view: Show last 7 days of consumption deltas
       final now = DateTime.now();
-      return List.generate(7, (i) {
-        final date = DateTime(now.year, now.month, now.day).subtract(Duration(days: 6 - i));
-        final endOfDay = date.add(const Duration(hours: 23, minutes: 59, seconds: 59));
+      points = List.generate(7, (i) {
+        final date = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: 6 - i));
+        final endOfDay =
+            date.add(const Duration(hours: 23, minutes: 59, seconds: 59));
 
         double dailyUnits = 0;
         for (final m in meters) {
@@ -179,8 +190,9 @@ class _UsageScreenState extends State<UsageScreen>
     } else {
       // Weekly view: Show last 4 weeks
       final now = DateTime.now();
-      return List.generate(4, (i) {
-        final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: (3 - i) * 7 + 6));
+      points = List.generate(4, (i) {
+        final start = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: (3 - i) * 7 + 6));
         final end = start.add(const Duration(days: 6, hours: 23, minutes: 59));
 
         double weeklyUnits = 0;
@@ -189,12 +201,55 @@ class _UsageScreenState extends State<UsageScreen>
         }
 
         return _ChartPoint(
-          label: 'W${4 - (3 - i)}',
+          label: 'W${i + 1}',
           units: weeklyUnits,
-          fullLabel: 'Week of ${_dateFmt.format(start)}',
+          fullLabel: 'Week ${i + 1} (${_dateFmt.format(start)})',
         );
       });
     }
+
+    // If all period units are 0 but meters have registered consumption, fallback to distributed usage
+    final totalUnits =
+        meters.fold<double>(0.0, (s, m) => s + m.consumedUnitsKwh);
+    final hasAnyPeriodUnits = points.any((p) => p.units > 0);
+    if (!hasAnyPeriodUnits && totalUnits > 0) {
+      if (tab == 0) {
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        return List.generate(7, (i) {
+          double dayKwh = 0;
+          for (final m in meters) {
+            if (i < m.dailyUsage.length) {
+              dayKwh += m.dailyUsage[i].kwh;
+            } else {
+              dayKwh += (m.consumedUnitsKwh / 7.0);
+            }
+          }
+          return _ChartPoint(
+            label: dayNames[i],
+            units: dayKwh,
+            fullLabel: dayNames[i],
+          );
+        });
+      } else {
+        return List.generate(4, (i) {
+          double weekKwh = 0;
+          for (final m in meters) {
+            if (i < m.weeklyUsage.length) {
+              weekKwh += m.weeklyUsage[i].kwh;
+            } else {
+              weekKwh += (m.consumedUnitsKwh / 4.0);
+            }
+          }
+          return _ChartPoint(
+            label: 'W${i + 1}',
+            units: weekKwh,
+            fullLabel: 'Week ${i + 1}',
+          );
+        });
+      }
+    }
+
+    return points;
   }
 
   List<MeterReadingLog> _collectLogs(List<MeterModel> meters) {
@@ -324,151 +379,154 @@ class _UsageScreenState extends State<UsageScreen>
                           child: Text('Add more data points to see trend',
                               style: TextStyle(
                                   fontSize: 12, color: AppColors.textMuted)))
-                      : BarChart(
-                          BarChartData(
-                            alignment: BarChartAlignment.spaceAround,
-                            maxY: chartPoints.isEmpty
-                                ? 10
-                                : chartPoints
-                                        .map((e) => e.units)
-                                        .reduce((a, b) => a > b ? a : b) *
-                                    1.3,
-                            gridData: FlGridData(
-                              show: true,
-                              drawVerticalLine: false,
-                              horizontalInterval: 50,
-                              getDrawingHorizontalLine: (value) => FlLine(
-                                color: Colors.grey.withValues(alpha: 0.05),
-                                strokeWidth: 1,
-                              ),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            barTouchData: BarTouchData(
-                              enabled: true,
-                              touchTooltipData: BarTouchTooltipData(
-                                getTooltipColor: (_) => AppColors.primary,
-                                tooltipPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                tooltipBorderRadius: BorderRadius.circular(12),
-                                getTooltipItem:
-                                    (group, groupIndex, rod, rodIndex) {
-                                  final point = chartPoints[groupIndex];
-                                  return BarTooltipItem(
-                                    '${rod.toY.toInt()} kWh\n',
-                                    const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14),
-                                    children: [
-                                      TextSpan(
-                                        text: point.fullLabel,
-                                        style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ),
-                            titlesData: FlTitlesData(
-                              topTitles: const AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: const AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false)),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 32,
-                                  getTitlesWidget: (v, meta) => Text(
-                                      v.toInt().toString(),
-                                      style: const TextStyle(
-                                          fontSize: 9,
-                                          color: AppColors.textMuted,
-                                          fontWeight: FontWeight.w600)),
+                      : Builder(
+                          builder: (context) {
+                            final maxUnits = chartPoints
+                                .map((e) => e.units)
+                                .fold(1.0, (a, b) => a > b ? a : b);
+                            final chartMaxY =
+                                (maxUnits * 1.35).clamp(10.0, 999999.0);
+
+                            double chartInterval = 20;
+                            if (chartMaxY <= 25) {
+                              chartInterval = 5;
+                            } else if (chartMaxY <= 60) {
+                              chartInterval = 10;
+                            } else if (chartMaxY <= 150) {
+                              chartInterval = 25;
+                            } else if (chartMaxY <= 300) {
+                              chartInterval = 50;
+                            } else {
+                              chartInterval = 100;
+                            }
+
+                            return BarChart(
+                              BarChartData(
+                                alignment: BarChartAlignment.spaceAround,
+                                maxY: chartMaxY,
+                                minY: 0,
+                                gridData: FlGridData(
+                                  show: true,
+                                  drawVerticalLine: false,
+                                  horizontalInterval: chartInterval,
+                                  getDrawingHorizontalLine: (value) => FlLine(
+                                    color: Colors.grey.withValues(alpha: 0.08),
+                                    strokeWidth: 1,
+                                  ),
                                 ),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 44,
-                                  getTitlesWidget: (v, meta) {
-                                    final idx = v.toInt();
-                                    if (idx < 0 || idx >= chartPoints.length) {
-                                      return const SizedBox();
-                                    }
-
-                                    // Skip logic to prevent overlap
-                                    final total = chartPoints.length;
-                                    int interval = 1;
-                                    if (total > 15) {
-                                      interval = 4;
-                                    } else if (total > 8) {
-                                      interval = 2;
-                                    }
-
-                                    if (idx % interval != 0 &&
-                                        idx != total - 1) {
-                                      return const SizedBox();
-                                    }
-
-                                    return SideTitleWidget(
-                                      meta: meta,
-                                      space: 8,
-                                      child: Transform.rotate(
-                                        angle: -0.5,
-                                        child: Text(
-                                          chartPoints[idx].label,
-                                          style: const TextStyle(
-                                            fontSize: 8,
-                                            color: AppColors.textMuted,
-                                            fontWeight: FontWeight.w700,
+                                borderData: FlBorderData(show: false),
+                                barTouchData: BarTouchData(
+                                  enabled: true,
+                                  touchTooltipData: BarTouchTooltipData(
+                                    getTooltipColor: (_) => AppColors.primary,
+                                    tooltipPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    tooltipBorderRadius:
+                                        BorderRadius.circular(12),
+                                    getTooltipItem:
+                                        (group, groupIndex, rod, rodIndex) {
+                                      final point = chartPoints[groupIndex];
+                                      return BarTooltipItem(
+                                        '${rod.toY.toInt()} Units\n',
+                                        const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14),
+                                        children: [
+                                          TextSpan(
+                                            text: point.fullLabel,
+                                            style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                                titlesData: FlTitlesData(
+                                  topTitles: const AxisTitles(
+                                      sideTitles:
+                                          SideTitles(showTitles: false)),
+                                  rightTitles: const AxisTitles(
+                                      sideTitles:
+                                          SideTitles(showTitles: false)),
+                                  leftTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      interval: chartInterval,
+                                      reservedSize: 34,
+                                      getTitlesWidget: (v, meta) {
+                                        if (v > chartMaxY || v < 0) {
+                                          return const SizedBox();
+                                        }
+                                        return SideTitleWidget(
+                                          meta: meta,
+                                          space: 4,
+                                          child: Text(
+                                            v.toInt().toString(),
+                                            style: GoogleFonts.inter(
+                                                fontSize: 9.5,
+                                                color: AppColors.textMuted,
+                                                fontWeight: FontWeight.w600),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      reservedSize: 34,
+                                      getTitlesWidget: (v, meta) {
+                                        final idx = v.toInt();
+                                        if (idx < 0 ||
+                                            idx >= chartPoints.length) {
+                                          return const SizedBox();
+                                        }
+                                        return SideTitleWidget(
+                                          meta: meta,
+                                          space: 6,
+                                          child: Text(
+                                            chartPoints[idx].label,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              color:
+                                                  AppColors.lightTextPrimary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                barGroups: [
+                                  for (var i = 0; i < chartPoints.length; i++)
+                                    BarChartGroupData(
+                                      x: i,
+                                      barRods: [
+                                        BarChartRodData(
+                                          toY: chartPoints[i].units,
+                                          gradient: AppColors.blueGradient,
+                                          width: _tab == 1 ? 22 : 16,
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                                  top: Radius.circular(8)),
+                                          backDrawRodData:
+                                              BackgroundBarChartRodData(
+                                            show: true,
+                                            toY: chartMaxY,
+                                            color: const Color(0xFFF1F5F9),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            barGroups: [
-                              for (var i = 0; i < chartPoints.length; i++)
-                                BarChartGroupData(
-                                  x: i,
-                                  barRods: [
-                                    BarChartRodData(
-                                      toY: chartPoints[i].units,
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          AppColors.primaryLight,
-                                          AppColors.primary
-                                              .withValues(alpha: 0.7)
-                                        ],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                      ),
-                                      width: chartPoints.length > 10 ? 10 : 16,
-                                      borderRadius: const BorderRadius.vertical(
-                                          top: Radius.circular(6)),
-                                      backDrawRodData:
-                                          BackgroundBarChartRodData(
-                                        show: true,
-                                        toY: chartPoints.isEmpty
-                                            ? 10
-                                            : chartPoints
-                                                    .map((e) => e.units)
-                                                    .reduce((a, b) =>
-                                                        a > b ? a : b) *
-                                                1.3,
-                                        color: AppColors.background
-                                            .withValues(alpha: 0.5),
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                            ],
-                          ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
             ),
           ],

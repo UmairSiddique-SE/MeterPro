@@ -211,7 +211,10 @@ class MeterReadingLog {
   });
 
   /// Units consumed for this specific log entry cycle:
-  int get consumedUnitsKwh => (readingKwh - baseReadingKwh).clamp(0, 999999);
+  int get consumedUnitsKwh {
+    if (baseReadingKwh <= 0) return 0;
+    return (readingKwh - baseReadingKwh).clamp(0, 999999);
+  }
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -322,25 +325,39 @@ class MeterModel {
 
   /// Units consumed in a specific period
   int unitsInPeriod(DateTime start, DateTime end) {
-    if (readingHistory.isEmpty) return 0;
+    if (readingHistory.isEmpty) {
+      return 0;
+    }
 
-    // Sort ascending for easier comparison
+    // Sort ascending (oldest first)
     final sorted = [...readingHistory]
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    // Find the last reading before or at the start of the period
-    final beforeLogs =
-        sorted.where((l) => !l.timestamp.isAfter(start)).toList();
-    final startReading =
-        beforeLogs.isEmpty ? previousReadingKwh : beforeLogs.last.readingKwh;
+    int periodTotal = 0;
 
-    // Find the last reading within the period
-    final withinLogs = sorted
-        .where((l) => !l.timestamp.isBefore(start) && !l.timestamp.isAfter(end))
-        .toList();
-    if (withinLogs.isEmpty) return 0;
+    for (int i = 0; i < sorted.length; i++) {
+      final log = sorted[i];
+      // Compute incremental units for this log
+      int delta = 0;
+      if (i > 0) {
+        delta = (log.readingKwh - sorted[i - 1].readingKwh).clamp(0, 999999);
+      } else {
+        // Initial log in history
+        final base = log.baseReadingKwh > 0 ? log.baseReadingKwh : previousReadingKwh;
+        if (base > 0 && log.readingKwh > base) {
+          delta = (log.readingKwh - base).clamp(0, 999999);
+        } else {
+          delta = 0;
+        }
+      }
 
-    return (withinLogs.last.readingKwh - startReading).clamp(0, 999999);
+      // Check if this log falls in [start, end]
+      if (!log.timestamp.isBefore(start) && !log.timestamp.isAfter(end)) {
+        periodTotal += delta;
+      }
+    }
+
+    return periodTotal.clamp(0, consumedUnitsKwh);
   }
 
   MeterModel copyWith({

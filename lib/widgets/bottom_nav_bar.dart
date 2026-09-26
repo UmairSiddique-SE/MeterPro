@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class MWBottomNavBar extends StatelessWidget {
@@ -135,12 +136,11 @@ class _NavItem extends StatelessWidget {
           ),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight:
-                  selected ? FontWeight.w700 : FontWeight.w400,
+                  selected ? FontWeight.w700 : FontWeight.w500,
               color: selected ? activeColor : inactiveColor,
-              fontFamily: 'Inter',
             ),
             child: Text(label),
           ),
