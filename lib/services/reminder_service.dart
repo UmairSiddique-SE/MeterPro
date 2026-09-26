@@ -101,60 +101,70 @@ class ReminderService {
   }
 
   Future<void> scheduleReminder(ReminderSettings settings) async {
-    await _localNotifications.cancelAll();
+    try {
+      await _localNotifications.cancelAll();
 
-    if (!settings.enabled) {
-      return;
-    }
+      if (!settings.enabled) {
+        return;
+      }
 
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      settings.reminderTime.hour,
-      settings.reminderTime.minute,
-    );
+      final androidPlugin = _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        await androidPlugin.requestNotificationsPermission();
+      }
 
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(
-        Duration(days: settings.frequency == 'Weekly' ? 7 : 1),
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduled = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        settings.reminderTime.hour,
+        settings.reminderTime.minute,
       );
+
+      if (scheduled.isBefore(now)) {
+        scheduled = scheduled.add(
+          Duration(days: settings.frequency == 'Weekly' ? 7 : 1),
+        );
+      }
+
+      const androidDetails = AndroidNotificationDetails(
+        'meterpro_reminders',
+        'MeterPro Reminders',
+        channelDescription: 'Daily and weekly meter reading reminders.',
+        importance: Importance.max,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        ticker: 'MeterPro reminder',
+        enableVibration: true,
+      );
+
+      const iosDetails = DarwinNotificationDetails();
+      const details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _localNotifications.zonedSchedule(
+        1,
+        'Check your meter reading',
+        settings.billReminders && settings.highUsageAlert
+            ? 'Your meter reminder is ready. Check reading and usage.'
+            : 'Time to check your meter reading.',
+        scheduled,
+        details,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: settings.frequency == 'Weekly'
+            ? DateTimeComponents.dayOfWeekAndTime
+            : DateTimeComponents.time,
+        payload: 'meterpro_reminder',
+      );
+    } catch (e) {
+      debugPrint('Error scheduling notification: $e');
     }
-
-    const androidDetails = AndroidNotificationDetails(
-      'meterpro_reminders',
-      'MeterPro Reminders',
-      channelDescription: 'Daily and weekly meter reading reminders.',
-      importance: Importance.max,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      ticker: 'MeterPro reminder',
-      enableVibration: true,
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _localNotifications.zonedSchedule(
-      1,
-      'Check your meter reading',
-      settings.billReminders && settings.highUsageAlert
-          ? 'Your meter reminder is ready. Check reading and usage.'
-          : 'Time to check your meter reading.',
-      scheduled,
-      details,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: settings.frequency == 'Weekly'
-          ? DateTimeComponents.dayOfWeekAndTime
-          : DateTimeComponents.time,
-      payload: 'meterpro_reminder',
-    );
   }
 }
