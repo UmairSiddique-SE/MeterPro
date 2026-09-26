@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
 
 class MWBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -22,21 +21,18 @@ class MWBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.darkSurface : Colors.white;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    const bg = Color(0xFF0F172A); // Rich professional dark slate background
+    const border = Color(0xFF1E293B);
 
     return Container(
       decoration: BoxDecoration(
         color: bg,
-        border: Border(top: BorderSide(color: border, width: 0.5)),
+        border: Border(top: BorderSide(color: border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.4)
-                : AppColors.primary.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, -8),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, -6),
           ),
         ],
       ),
@@ -60,7 +56,6 @@ class MWBottomNavBar extends StatelessWidget {
                         label: item.label,
                         selected: selected,
                         onTap: () => onTap(i),
-                        isDark: isDark,
                       )),
                     ],
                   ),
@@ -72,7 +67,6 @@ class MWBottomNavBar extends StatelessWidget {
                   label: item.label,
                   selected: selected,
                   onTap: () => onTap(i),
-                  isDark: isDark,
                 ),
               );
             }),
@@ -88,21 +82,19 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final bool isDark;
 
   const _NavItem({
     required this.icon,
     required this.label,
     required this.selected,
     required this.onTap,
-    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    const activeColor = AppColors.primary;
-    final inactiveColor =
-        isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+    const activeColor = Colors.white;
+    const activeBgColor = Color(0xFF2563EB); // Shining Blue Pill
+    const inactiveColor = Colors.white60;
 
     return GestureDetector(
       onTap: () {
@@ -120,24 +112,23 @@ class _NavItem extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.primary.withValues(alpha: 0.12)
-                    : Colors.transparent,
+                color: selected ? activeBgColor : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                size: 22,
+                size: 20,
                 color: selected ? activeColor : inactiveColor,
               ),
             ),
           ),
+          const SizedBox(height: 2),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
             style: GoogleFonts.inter(
-              fontSize: 10,
+              fontSize: 9.5,
               fontWeight:
                   selected ? FontWeight.w700 : FontWeight.w500,
               color: selected ? activeColor : inactiveColor,

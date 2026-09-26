@@ -15,11 +15,11 @@ class AppColors {
   static const Color navy500 = Color(0xFF475569);
 
   // Vibrant Electric Sapphire & Royal Blue
-  static const Color primary = Color(0xFF2563EB); // Vibrant Electric Blue
-  static const Color primaryDark = Color(0xFF1D4ED8);
-  static const Color primaryLight = Color(0xFF3B82F6);
+  static const Color primary = Color(0xFF1D4ED8); // Rich Professional Blue
+  static const Color primaryDark = Color(0xFF1E40AF);
+  static const Color primaryLight = Color(0xFF2563EB);
   static const Color primarySoft = Color(0xFFEFF6FF);
-  static const Color primaryGlow = Color(0x352563EB);
+  static const Color primaryGlow = Color(0x351D4ED8);
 
   // ── Aesthetic Accents ──
   static const Color amber = Color(0xFFF59E0B); // Amber / Gold Energy
@@ -80,7 +80,7 @@ class AppColors {
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1D4ED8)],
+    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8), Color(0xFF1E40AF)],
   );
 
   static const LinearGradient premiumGradient = LinearGradient(
