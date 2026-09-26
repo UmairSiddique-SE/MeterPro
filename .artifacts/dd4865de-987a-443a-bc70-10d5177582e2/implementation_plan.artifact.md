@@ -1,12 +1,12 @@
-# Implementation Plan - Professional Usage Charts & Actual Reading Events (Daily View)
+# Implementation Plan - Fully Adaptive & Responsive Layout (Mobile & Tablet)
 
-Refactor the Usage screen (`UsageScreen`) so that the **Daily** view displays chart bars strictly based on **actual reading log events** ("jab jab reading li ho wo nazar ay, all day ki nahi") rather than static calendar days, and ensure consumed units are calculated accurately.
+Ensure the application automatically adapts its layout, grid columns, and spacing across all mobile phones, foldables, and tablets regardless of screen resolution.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Daily View Refactor**: In the Daily tab, the consumption chart will plot data points corresponding precisely to the exact timestamps and consumed units of when meter readings were recorded.
-> - **Accurate Consumption Calculation**: Ensure `consumedUnitsKwh` for log entries correctly accounts for previous base readings to prevent incorrect large unit numbers (like `+13109 Units`).
+> - **Adaptive Grid Columns**: On tablets and wide screens, the meter cards grid will dynamically adjust its columns (`crossAxisCount` = 3 or 4 instead of fixed 2) to utilize screen real estate efficiently.
+> - **Overflow Prevention**: All major screens use scrollable wrappers (`CustomScrollView`, `SingleChildScrollView`) ensuring zero overflow on any device orientation or resolution.
 
 ## Open Questions
 
@@ -14,21 +14,18 @@ None.
 
 ## Proposed Changes
 
-### Models & Usage Screen
+### Dashboard / Main Screen Adaptiveness
 
-#### [MODIFY] [meter.dart](file:///D:/Project/meterpro/lib/models/meter.dart)
-- Improve `consumedUnitsKwh` calculation in `MeterReadingLog` so that if `baseReadingKwh` is 0 or less, it falls back gracefully to the previous log reading or meter baseline.
-
-#### [MODIFY] [usage_screen.dart](file:///D:/Project/meterpro/lib/screens/usage_screen.dart)
-- Update `_buildChartPoints` for Daily view (`tab == 0`) to collect actual reading logs (`allLogs`) and generate chart points from each recorded reading event (`log.timestamp`, `log.consumedUnitsKwh`).
-- For Weekly view (`tab == 1`), maintain clean weekly period grouping.
+#### [MODIFY] [dashboard_screen.dart](file:///D:/Project/meterpro/lib/screens/dashboard_screen.dart)
+- Update `GridView.builder` grid delegate to dynamically calculate `crossAxisCount` based on screen width (`MediaQuery.of(context).size.width`):
+  - Width < 600: `2` columns (Phones)
+  - Width >= 600 & < 900: `3` columns (Small Tablets)
+  - Width >= 900: `4` columns (Large Tablets / Desktops)
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `flutter analyze` to ensure zero compilation errors.
+- Run `flutter analyze` to ensure zero compilation errors or warnings.
 
 ### Manual Verification
-- Navigate to the Usage screen.
-- Verify Daily tab displays bars only for actual reading dates with correct consumed units.
-- Verify Weekly tab displays weekly breakdown cleanly.
+- Test app layout behavior on phone and tablet emulators / devices.

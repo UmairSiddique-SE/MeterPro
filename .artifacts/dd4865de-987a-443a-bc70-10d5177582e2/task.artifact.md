@@ -1,5 +1,4 @@
-# Task List - Professional Usage Charts & Actual Reading Events
+# Task List - Adaptive & Responsive Layout
 
-- [ ] Improve `consumedUnitsKwh` calculation in `MeterReadingLog` (`lib/models/meter.dart`)
-- [ ] Refactor `_buildChartPoints` in `UsageScreen` (`lib/screens/usage_screen.dart`) for Daily view to plot actual reading log events
-- [ ] Verify build and functionality with `flutter analyze`
+- [ ] Update `DashboardScreen` grid layout in `lib/screens/dashboard_screen.dart` to be fully responsive for phones and tablets
+- [ ] Verify build and analysis with `flutter analyze`
