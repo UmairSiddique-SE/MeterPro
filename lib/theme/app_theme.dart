@@ -22,10 +22,10 @@ class AppColors {
   static const Color primaryGlow = Color(0x351D4ED8);
 
   // ── Aesthetic Accents ──
-  static const Color amber = Color(0xFFF59E0B); // Amber / Gold Energy
-  static const Color amberDark = Color(0xFFD97706);
-  static const Color amberSoft = Color(0xFFFFFBEB);
-  static const Color amberGlow = Color(0x30F59E0B);
+  static const Color amber = Color(0xFFFACC15); // Bright Clear Golden Yellow
+  static const Color amberDark = Color(0xFFEAB308);
+  static const Color amberSoft = Color(0xFFFEFCE8);
+  static const Color amberGlow = Color(0x35FACC15);
 
   static const Color green = Color(0xFF10B981); // Emerald Green Active
   static const Color greenDark = Color(0xFF059669);
