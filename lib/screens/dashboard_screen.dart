@@ -696,23 +696,32 @@ class _DashboardHome extends StatelessWidget {
                     else if (meters.isEmpty)
                       _EmptyMetersCard(onAddMeter: onAddMeter)
                     else
-                      GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.78,
-                        ),
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: meters.length,
-                        itemBuilder: (context, index) {
-                          final m = meters[index];
-                          return FadeSlideEntrance(
-                            delay: Duration(milliseconds: 100 * index),
-                            child: MeterCard(
-                                meter: m, onTap: () => onOpenMeter(m)),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final width = constraints.maxWidth;
+                          final crossAxisCount = width >= 900
+                              ? 4
+                              : (width >= 600 ? 3 : 2);
+
+                          return GridView.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.78,
+                            ),
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: meters.length,
+                            itemBuilder: (context, index) {
+                              final m = meters[index];
+                              return FadeSlideEntrance(
+                                delay: Duration(milliseconds: 100 * index),
+                                child: MeterCard(
+                                    meter: m, onTap: () => onOpenMeter(m)),
+                              );
+                            },
                           );
                         },
                       ),
