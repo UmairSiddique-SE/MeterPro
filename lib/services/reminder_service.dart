@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -22,13 +23,13 @@ class ReminderSettings {
   });
 
   Map<String, dynamic> toMap() => {
-    'enabled': enabled,
-    'billReminders': billReminders,
-    'highUsageAlert': highUsageAlert,
-    'frequency': frequency,
-    'hour': reminderTime.hour,
-    'minute': reminderTime.minute,
-  };
+        'enabled': enabled,
+        'billReminders': billReminders,
+        'highUsageAlert': highUsageAlert,
+        'frequency': frequency,
+        'hour': reminderTime.hour,
+        'minute': reminderTime.minute,
+      };
 
   factory ReminderSettings.fromMap(Map<String, dynamic> map) {
     final hour = map['hour'] as int? ?? 9;
@@ -53,6 +54,26 @@ class ReminderService {
   bool _initialized = false;
   static const String _prefKey = 'meterpro_reminder_settings';
 
+  Future<void> _ensureAndroidPermissions() async {
+    if (!Platform.isAndroid) return;
+
+    final androidPlugin =
+        _localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return;
+
+    await androidPlugin.requestNotificationsPermission();
+
+    if (Platform.version.startsWith('Android')) {
+      try {
+        await androidPlugin.requestExactAlarmsPermission();
+      } catch (_) {
+        debugPrint(
+            'Exact alarm permission not supported on this Android version.');
+      }
+    }
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
     tz.initializeTimeZones();
@@ -74,6 +95,7 @@ class ReminderService {
     );
 
     await _localNotifications.initialize(initSettings);
+    await _ensureAndroidPermissions();
 
     // Explicitly create notification channel for Android 8.0+
     const androidChannel = AndroidNotificationChannel(
@@ -83,7 +105,8 @@ class ReminderService {
       importance: Importance.max,
     );
     await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
 
     _initialized = true;
@@ -136,10 +159,16 @@ class ReminderService {
         return;
       }
 
-      final androidPlugin = _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin =
+          _localNotifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         await androidPlugin.requestNotificationsPermission();
+        try {
+          await androidPlugin.requestExactAlarmsPermission();
+        } catch (_) {
+          debugPrint('Exact alarm permission not available for this device.');
+        }
       }
 
       final now = tz.TZDateTime.now(tz.local);
@@ -217,10 +246,16 @@ class ReminderService {
 
   Future<void> showTestNotification() async {
     try {
-      final androidPlugin = _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin =
+          _localNotifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         await androidPlugin.requestNotificationsPermission();
+        try {
+          await androidPlugin.requestExactAlarmsPermission();
+        } catch (_) {
+          debugPrint('Exact alarm permission not available for this device.');
+        }
       }
 
       const androidDetails = AndroidNotificationDetails(
