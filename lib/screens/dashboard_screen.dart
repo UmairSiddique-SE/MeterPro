@@ -12,6 +12,7 @@ import '../theme/theme_provider.dart';
 import '../utils/animation_utils.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/meter_card.dart';
+import '../widgets/notification_settings_sheet.dart';
 import 'add_meter_screen.dart';
 import 'bills_screen.dart';
 import 'camera_scanner_screen.dart';
@@ -435,18 +436,11 @@ class _DashboardHome extends StatelessWidget {
                               // Notification button
                               GestureDetector(
                                 onTap: () {
-                                  showDialog(
+                                  showModalBottomSheet(
                                     context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: const Text('Notifications'),
-                                      content: const Text('No new notifications. All meter readings are up to date!'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(ctx).pop(),
-                                          child: const Text('Close'),
-                                        ),
-                                      ],
-                                    ),
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => const NotificationSettingsSheet(),
                                   );
                                 },
                                 child: Container(
