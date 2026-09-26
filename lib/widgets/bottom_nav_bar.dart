@@ -21,16 +21,16 @@ class MWBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bg = Color(0xFF1E293B); // Rich professional blue-slate background
-    const border = Color(0xFF334155);
+    const bg = Colors.white;
+    const border = AppColors.primary;
 
     return Container(
       decoration: const BoxDecoration(
         color: bg,
-        border: Border(top: BorderSide(color: border, width: 1)),
+        border: Border(top: BorderSide(color: border, width: 2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black38,
+            color: Color(0x1A2563EB),
             blurRadius: 20,
             offset: Offset(0, -6),
           ),
@@ -93,8 +93,8 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const activeColor = Colors.white;
-    const activeBgColor = Color(0xFF2563EB); // Shining Blue Pill
-    const inactiveColor = Colors.white60;
+    const activeBgColor = AppColors.primary; // Shining Blue Pill
+    const inactiveColor = AppColors.navy700; // Rich navy for clear visibility
 
     return GestureDetector(
       onTap: () {
@@ -146,8 +146,8 @@ class _NavItem extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               style: GoogleFonts.inter(
                 fontSize: 9.5,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? activeColor : inactiveColor,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected ? AppColors.primary : inactiveColor,
               ),
               child: Text(label),
             ),
