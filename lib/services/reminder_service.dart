@@ -87,6 +87,14 @@ class ReminderService {
         ?.createNotificationChannel(androidChannel);
 
     _initialized = true;
+
+    // Android removes scheduled alarms when the device restarts. Restore the
+    // user's reminder after plugin setup so reminders survive a reboot/update.
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_prefKey);
+    if (saved != null) {
+      await scheduleReminder(await loadSettings());
+    }
   }
 
   Future<ReminderSettings> loadSettings() async {
@@ -121,6 +129,7 @@ class ReminderService {
 
   Future<void> scheduleReminder(ReminderSettings settings) async {
     try {
+      if (!_initialized) await initialize();
       await _localNotifications.cancelAll();
 
       if (!settings.enabled) {
