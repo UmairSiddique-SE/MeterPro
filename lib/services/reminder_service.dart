@@ -56,6 +56,13 @@ class ReminderService {
   Future<void> initialize() async {
     if (_initialized) return;
     tz.initializeTimeZones();
+    try {
+      tz.setLocalLocation(tz.getLocation('Asia/Karachi'));
+    } catch (_) {
+      try {
+        tz.setLocalLocation(tz.getLocation('Asia/Karachi'));
+      } catch (_) {}
+    }
 
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
