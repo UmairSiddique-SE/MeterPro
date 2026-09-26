@@ -42,35 +42,42 @@ class MWBottomNavBar extends StatelessWidget {
         child: SizedBox(
           height: 64,
           child: Row(
-            children: List.generate(_items.length, (i) {
-              final selected = i == currentIndex;
-              final item = _items[i];
-              // Skip center gap (for FAB)
-              if (i == 2) {
-                return Expanded(
-                  child: Row(
-                    children: [
-                      // Gap for FAB
-                      const SizedBox(width: 32),
-                      Expanded(child: _NavItem(
-                        icon: selected ? item.activeIcon : item.icon,
-                        label: item.label,
-                        selected: selected,
-                        onTap: () => onTap(i),
-                      )),
-                    ],
-                  ),
-                );
-              }
-              return Expanded(
+            children: [
+              Expanded(
                 child: _NavItem(
-                  icon: selected ? item.activeIcon : item.icon,
-                  label: item.label,
-                  selected: selected,
-                  onTap: () => onTap(i),
+                  icon: currentIndex == 0 ? _items[0].activeIcon : _items[0].icon,
+                  label: _items[0].label,
+                  selected: currentIndex == 0,
+                  onTap: () => onTap(0),
                 ),
-              );
-            }),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: currentIndex == 1 ? _items[1].activeIcon : _items[1].icon,
+                  label: _items[1].label,
+                  selected: currentIndex == 1,
+                  onTap: () => onTap(1),
+                ),
+              ),
+              // Center gap for FloatingActionButton
+              const SizedBox(width: 60),
+              Expanded(
+                child: _NavItem(
+                  icon: currentIndex == 2 ? _items[2].activeIcon : _items[2].icon,
+                  label: _items[2].label,
+                  selected: currentIndex == 2,
+                  onTap: () => onTap(2),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: currentIndex == 3 ? _items[3].activeIcon : _items[3].icon,
+                  label: _items[3].label,
+                  selected: currentIndex == 3,
+                  onTap: () => onTap(3),
+                ),
+              ),
+            ],
           ),
         ),
       ),

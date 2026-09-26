@@ -56,6 +56,10 @@ class _NotificationSettingsSheetState extends State<NotificationSettingsSheet> {
   }
 
   Future<void> _save() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final formattedTime = _reminderTime.format(context);
+
     final current = await ReminderService.instance.loadSettings();
     final updated = ReminderSettings(
       enabled: _enabled,
@@ -68,12 +72,12 @@ class _NotificationSettingsSheetState extends State<NotificationSettingsSheet> {
     await ReminderService.instance.saveSettings(updated);
     if (!mounted) return;
 
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
+    navigator.pop();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(
           _enabled
-              ? 'Reminder set successfully for ${_reminderTime.format(context)}'
+              ? 'Reminder set successfully for $formattedTime'
               : 'Notifications turned off',
         ),
         backgroundColor: AppColors.primary,
@@ -272,6 +276,38 @@ class _NotificationSettingsSheetState extends State<NotificationSettingsSheet> {
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      await ReminderService.instance.showTestNotification();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Test notification sent! Check your notification bar.'),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.notifications_active_outlined, size: 18),
+                    label: Text(
+                      'Test Notification Now',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),

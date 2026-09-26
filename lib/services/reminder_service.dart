@@ -74,6 +74,18 @@ class ReminderService {
     );
 
     await _localNotifications.initialize(initSettings);
+
+    // Explicitly create notification channel for Android 8.0+
+    const androidChannel = AndroidNotificationChannel(
+      'meterpro_reminders',
+      'MeterPro Reminders',
+      description: 'Daily and weekly meter reading reminders.',
+      importance: Importance.max,
+    );
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
+
     _initialized = true;
   }
 
@@ -191,6 +203,40 @@ class ReminderService {
       }
     } catch (e) {
       debugPrint('Error scheduling notification: $e');
+    }
+  }
+
+  Future<void> showTestNotification() async {
+    try {
+      final androidPlugin = _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        await androidPlugin.requestNotificationsPermission();
+      }
+
+      const androidDetails = AndroidNotificationDetails(
+        'meterpro_reminders',
+        'MeterPro Reminders',
+        channelDescription: 'Daily and weekly meter reading reminders.',
+        importance: Importance.max,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      );
+
+      const details = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(),
+      );
+
+      await _localNotifications.show(
+        99,
+        'Check your meter reading',
+        'Test reminder: Time to check your meter reading!',
+        details,
+        payload: 'test_notification',
+      );
+    } catch (e) {
+      debugPrint('Error showing test notification: $e');
     }
   }
 }
