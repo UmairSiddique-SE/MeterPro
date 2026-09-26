@@ -1,4 +1,4 @@
-name: Build and Release Android APK
+name: Publish Android APK
 
 on:
   push:
@@ -12,60 +12,40 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout release tag
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Test
-        run: flutter test
-
-      - name: Build release APK
-        run: flutter build apk --release --android-skip-build-dependency-validation
-
-      - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/MeterPro.apk
-
-      - name: Extract version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+      - name: Verify signed APK and version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          app_version="$(sed -n 's/^version: \([^+]*\)+.*/\1/p' pubspec.yaml)"
+          test "$tag_version" = "$app_version"
+          test -s public/MeterPro.apk
+          sha256sum public/MeterPro.apk
 
       - name: Update version.json on main branch
+        shell: bash
         run: |
+          version="${GITHUB_REF_NAME#v}"
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git fetch origin main
-          git checkout main
+          git switch -C main origin/main
           cat > version.json << EOF
           {
-            "latest_version": "${{ steps.get_version.outputs.VERSION }}",
+            "latest_version": "$version",
             "download_url": "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk",
-            "release_notes": "New version ${{ steps.get_version.outputs.VERSION }} available with improvements and bug fixes.",
+            "release_notes": "MeterPro $version includes reliable reminders and update improvements.",
             "force_update": false
           }
           EOF
           git add version.json
-          git commit -m "chore: bump version.json to ${{ steps.get_version.outputs.VERSION }} [skip ci]" || echo "Nothing to commit"
+          git commit -m "chore: publish version.json for $version [skip ci]" || echo "Nothing to commit"
           git push origin main
 
-      - name: Create or Update GitHub Release
+      - name: Create GitHub release with signed APK
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: build/app/outputs/flutter-apk/MeterPro.apk
+          files: public/MeterPro.apk
