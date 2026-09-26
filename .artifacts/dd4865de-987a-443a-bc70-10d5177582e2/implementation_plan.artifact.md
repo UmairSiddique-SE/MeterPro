@@ -1,40 +1,35 @@
-# Implementation Plan - Meter Card Redesign on Main Screen
+# Implementation Plan - Notification Reminders & Time Picker
 
-Remove "Read" and "Used" statistics, remove the "Weekly Trend" chart, and replace them with the last 5 readings list while emphasizing the latest "last seen" reading prominently on each meter card on the main screen.
+Implement a professional bottom sheet widget for notification settings where users can toggle notifications ON/OFF and select a custom reminder time for "Check meter reading" reminders.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Main Screen UI Changes**: On the main screen meter cards (`MeterCard`), "Read: ... kWh" and "Used: ... kWh" will be removed.
-> - **Weekly Trend Removal**: The "Weekly Trend" header and `BarChart` will be removed.
-> - **Last 5 Readings & Last Seen**: A list of the last up to 5 readings from `readingHistory` will be displayed, with the most recent ("last seen") reading highlighted prominently.
+> - **Notification Settings Bottom Sheet**: Clicking the notification bell on the dashboard will open a professional bottom sheet UI.
+> - **Features**:
+>   - Toggle Notification ON/OFF switch.
+>   - Time Picker to select reminder time.
+>   - Persistence and scheduling via `ReminderService`.
 
 ## Open Questions
 
-None. The requirements are clear from the user request in Urdu/Roman Urdu.
+None. The user requirements are clear ("notification par click kary to option hy notifictaion of and notifiction tume phir os time par remonder ajay chaek meter reading sahi professional wala semnn bana dena").
 
 ## Proposed Changes
 
-### Meter Card & Dashboard UI
+### Notification Settings Sheet & Dashboard Integration
 
-#### [MODIFY] [meter_card.dart](file:///D:/Project/meterpro/lib/widgets/meter_card.dart)
-- Remove `Read:` and `Used:` row.
-- Remove `Weekly Trend` label and `BarChart`.
-- Add a section displaying the last 5 entries from `meter.readingHistory` (using `meter.readingHistory.reversed.take(5)`).
-- Highlight the most recent reading ("last seen") prominently (bold font, accent color/badge).
-- Keep the bottom row showing Monthly Units (kWh) and Estimated Bill (Pkr).
+#### [NEW] [notification_settings_sheet.dart](file:///D:/Project/meterpro/lib/widgets/notification_settings_sheet.dart)
+- Create a professional modal bottom sheet component (`NotificationSettingsSheet`) using `ReminderService` to load and save settings (enable/disable toggle and time picker).
 
 #### [MODIFY] [dashboard_screen.dart](file:///D:/Project/meterpro/lib/screens/dashboard_screen.dart)
-- Adjust `childAspectRatio` in `GridView.builder` for the meter cards if necessary to accommodate the last 5 readings list cleanly.
+- Update the notification button tap handler to display `NotificationSettingsSheet` instead of the placeholder dialog.
 
 ## Verification Plan
 
 ### Automated Tests
-- Build and run the app or run widget tests if available.
+- Run `flutter analyze` to ensure zero compilation errors or warnings.
 
 ### Manual Verification
-- Deploy to device/emulator and verify on the main screen:
-  1. "Read" and "Used" labels are removed from meter cards.
-  2. Weekly Trend chart is removed.
-  3. Last 5 readings are listed for each meter.
-  4. The last seen reading is highlighted clearly and prominently.
+- Tap notification bell on dashboard.
+- Verify notification toggle works, time picker works, and saving correctly schedules the notification.

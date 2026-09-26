@@ -1,6 +1,5 @@
-# Task List - Meter Card Redesign
+# Task List - Notification Settings Sheet
 
-- [x] Update `MeterCard` in `lib/widgets/meter_card.dart` to remove Read/Used and Weekly Trend chart
-- [x] Implement last 5 readings list with prominent "last seen" highlighting in `MeterCard`
-- [x] Adjust `childAspectRatio` in `DashboardScreen` (`lib/screens/dashboard_screen.dart`) if needed
-- [x] Verify build and functionality
+- [ ] Create `NotificationSettingsSheet` widget in `lib/widgets/notification_settings_sheet.dart` with ON/OFF toggle, time picker, and professional UI design.
+- [ ] Update notification button handler in `lib/screens/dashboard_screen.dart` to open `NotificationSettingsSheet`.
+- [ ] Verify project builds and analyzes cleanly with `flutter analyze`.
