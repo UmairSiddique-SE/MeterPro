@@ -168,7 +168,7 @@ class _NotificationSettingsSheetState extends State<NotificationSettingsSheet> {
                       ),
                       Switch.adaptive(
                         value: _enabled,
-                        activeColor: AppColors.primary,
+                        activeTrackColor: AppColors.primary,
                         onChanged: (v) => setState(() => _enabled = v),
                       ),
                     ],
