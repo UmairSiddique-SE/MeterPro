@@ -12,9 +12,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # @formatter:off
     env:
       KEYSTORE_BASE64: ${{ secrets.METERPRO_KEYSTORE_BASE64 }}
       KEY_PROPERTIES: ${{ secrets.METERPRO_KEY_PROPERTIES }}
+    # @formatter:on
     steps:
       - name: Checkout
         uses: actions/checkout@v4

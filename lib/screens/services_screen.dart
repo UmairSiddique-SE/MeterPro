@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/meter.dart';
+import '../services/reminder_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/animation_utils.dart';
 import 'meters_screen.dart';
@@ -17,6 +19,176 @@ class ServicesScreen extends StatelessWidget {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       throw Exception('Could not launch $url');
     }
+  }
+
+  void _showNotificationSettings(BuildContext context) async {
+    final savedSettings = await ReminderService.instance.loadSettings();
+    bool billReminders = savedSettings.billReminders;
+    bool highUsage = savedSettings.highUsageAlert;
+    String frequency = savedSettings.frequency;
+    TimeOfDay reminderTime = savedSettings.reminderTime;
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) => Container(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Usage Notifications',
+                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 8),
+              Text('Set reminders to check your meter readings.',
+                  style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13)),
+              const SizedBox(height: 24),
+
+              Text('REMINDER SETTINGS',
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMuted,
+                      letterSpacing: 1)),
+              const SizedBox(height: 12),
+
+              // Frequency Selector
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: ['Daily', 'Weekly'].map((f) {
+                    final selected = frequency == f;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setMState(() => frequency = f),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? AppColors.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            f,
+                            style: GoogleFonts.inter(
+                              color: selected
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Time Picker Tile
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                tileColor: AppColors.background,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                leading: const Icon(Icons.access_time_rounded,
+                    color: AppColors.primary),
+                title: Text('Reminder Time',
+                    style:
+                        GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14)),
+                trailing: Text(
+                  reminderTime.format(ctx),
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                      fontSize: 16),
+                ),
+                onTap: () async {
+                  final picked = await showTimePicker(
+                      context: ctx, initialTime: reminderTime);
+                  if (picked != null) setMState(() => reminderTime = picked);
+                },
+              ),
+              const SizedBox(height: 24),
+
+              Text('SYSTEM ALERTS',
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMuted,
+                      letterSpacing: 1)),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Bill Reminders',
+                    style:
+                        GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text(
+                    'Get notified when your bill is estimated.',
+                    style: GoogleFonts.inter(fontSize: 11)),
+                value: billReminders,
+                onChanged: (v) => setMState(() => billReminders = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('High Usage Alert',
+                    style:
+                        GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text('Notify if daily units exceed 20 kWh.',
+                    style: GoogleFonts.inter(fontSize: 11)),
+                value: highUsage,
+                onChanged: (v) => setMState(() => highUsage = v),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final formattedTime = reminderTime.format(ctx);
+                    final settings = ReminderSettings(
+                      enabled: true,
+                      billReminders: billReminders,
+                      highUsageAlert: highUsage,
+                      frequency: frequency,
+                      reminderTime: reminderTime,
+                    );
+                    await ReminderService.instance.saveSettings(settings);
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Reminders set for $frequency at $formattedTime.',
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Save Notification Settings'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showUnitCalculator(BuildContext context) {
@@ -225,6 +397,17 @@ class ServicesScreen extends StatelessWidget {
                 context,
                 SmoothPageRoute(child: const MetersScreen()),
               ),
+            ),
+          ),
+          FadeSlideEntrance(
+            delay: const Duration(milliseconds: 400),
+            child: _serviceCard(
+              context,
+              Icons.notifications_active_rounded,
+              'Reading Reminders',
+              'Set daily or weekly alerts to check and record your meter readings.',
+              const Color(0xFF0284C7),
+              () => _showNotificationSettings(context),
             ),
           ),
           const SizedBox(height: 20),
