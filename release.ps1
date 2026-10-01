@@ -5,6 +5,12 @@ if (-not $version) {
     exit 1
 }
 
+# Auto-set JAVA_HOME from Android Studio JBR
+if (Test-Path "C:\Program Files\Android\Android Studio\jbr") {
+    $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+    $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+}
+
 $tag = "v$version"
 Write-Host "==> Preparing Release $tag..." -ForegroundColor Cyan
 
@@ -26,6 +32,8 @@ $versionJsonPath = "version.json"
 $versionJson = @{
     latest_version = $version
     download_url = "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk"
+    release_notes = "MeterPro $version: Accurate FESCO bill calculations, scheduled reminder notifications, and UI improvements."
+    force_update = $false
 } | ConvertTo-Json
 Set-Content -Path $versionJsonPath -Value $versionJson
 Write-Host "Updated $versionJsonPath -> $version" -ForegroundColor Green
@@ -41,9 +49,8 @@ if (Test-Path $indexPath) {
     Write-Host "Updated $indexPath version references." -ForegroundColor Green
 }
 
-# 4. Flutter Clean, Analyze, Test & Build Signed Release APK
+# 4. Flutter Analyze, Test & Build Signed Release APK
 Write-Host "`n[1/4] Building signed APK release..." -ForegroundColor Cyan
-flutter clean
 flutter pub get
 flutter analyze
 if ($LASTEXITCODE -ne 0) { Write-Host "Flutter analyze failed!" -ForegroundColor Red; exit $LASTEXITCODE }
