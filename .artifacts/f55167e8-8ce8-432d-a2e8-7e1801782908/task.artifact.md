@@ -1,0 +1,5 @@
+- [x] Add manual capture button to `CameraScannerScreen` for bill mode
+- [x] Update `AddMeterScreen` UI with a prominent "Scan Bill" card
+- [x] Implement `_showExtractedDataDialog` in `AddMeterScreen`
+- [x] Connect Gallery pick flow to the verification dialog
+- [x] Final verification of the end-to-end flow

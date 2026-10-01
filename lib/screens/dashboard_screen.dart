@@ -1,0 +1,785 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import '../models/meter.dart';
+import '../services/app_update_service.dart';
+import '../services/meter_repository.dart';
+import '../services/ocr_service.dart';
+import '../theme/app_theme.dart';
+import '../theme/theme_provider.dart';
+import '../utils/animation_utils.dart';
+import '../widgets/bottom_nav_bar.dart';
+import '../widgets/meter_card.dart';
+import '../widgets/notification_settings_sheet.dart';
+import 'add_meter_screen.dart';
+import 'bills_screen.dart';
+import 'camera_scanner_screen.dart';
+import 'meter_detail_screen.dart';
+import 'profile_screen.dart';
+import 'services_screen.dart';
+import 'usage_screen.dart';
+
+final _pkr =
+    NumberFormat.currency(locale: 'en_US', symbol: 'Rs', decimalDigits: 0);
+
+// Helpers used in dashboard
+double totalConsumptionKwh(List<MeterModel> meters) {
+  return meters.fold(0.0, (sum, m) => sum + m.monthlyUnitsKwh);
+}
+
+double totalEstimatedBillPkr(List<MeterModel> meters) {
+  return meters.fold(0.0, (sum, m) => sum + m.monthlyBillPkr);
+}
+
+class DashboardScreen extends StatefulWidget {
+  final ThemeProvider? themeProvider;
+  const DashboardScreen({super.key, this.themeProvider});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  int _navIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppUpdateService.instance.checkAndShow(context);
+      }
+    });
+  }
+
+  void _openMeter(MeterModel meter) async {
+    final result = await Navigator.of(context).push<String>(
+      SmoothPageRoute(child: MeterDetailScreen(meter: meter)),
+    );
+    if (result == 'go_to_usage') {
+      setState(() => _navIndex = 1);
+    }
+  }
+
+  void _openAddMeter() {
+    Navigator.of(context).push(
+      SmoothPageRoute(child: const AddMeterScreen()),
+    );
+  }
+
+  Future<void> _quickScanMeter(
+      BuildContext context, List<MeterModel> meters) async {
+    if (meters.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Please add a meter first before scanning.')),
+      );
+      return;
+    }
+
+    final registeredIdentifiers = <String>[];
+    for (final m in meters) {
+      if (m.meterNo.trim().isNotEmpty) registeredIdentifiers.add(m.meterNo);
+      if (m.referenceNo.trim().isNotEmpty) registeredIdentifiers.add(m.referenceNo);
+      if (m.consumerNo.trim().isNotEmpty) registeredIdentifiers.add(m.consumerNo);
+    }
+
+    final result = await Navigator.of(context).push<OCRScanResult>(
+      MaterialPageRoute(
+        builder: (_) => CameraScannerScreen(
+          registeredMeterNumbers: registeredIdentifiers,
+          scanSerialOnly: false,
+          allowUnregisteredMeter: meters.length == 1,
+        ),
+      ),
+    );
+
+    if (!context.mounted || result == null) return;
+
+    MeterModel? matched;
+
+    if (meters.length == 1) {
+      matched = meters.first;
+    } else {
+      final scannedNo = result.meterNo?.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase() ?? '';
+      final scannedRef = result.referenceNo?.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase() ?? '';
+
+      for (final m in meters) {
+        final mNo = m.meterNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+        final refNo = m.referenceNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+        final cNo = m.consumerNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+
+        if (scannedNo.isNotEmpty &&
+            ((mNo.isNotEmpty && (mNo == scannedNo || mNo.contains(scannedNo) || scannedNo.contains(mNo))) ||
+             (refNo.isNotEmpty && (refNo == scannedNo || refNo.contains(scannedNo) || scannedNo.contains(refNo))) ||
+             (cNo.isNotEmpty && (cNo == scannedNo || cNo.contains(scannedNo) || scannedNo.contains(cNo))))) {
+          matched = m;
+          break;
+        }
+
+        if (scannedRef.isNotEmpty &&
+            ((refNo.isNotEmpty && (refNo == scannedRef || refNo.contains(scannedRef) || scannedRef.contains(refNo))) ||
+             (mNo.isNotEmpty && (mNo == scannedRef || mNo.contains(scannedRef) || scannedRef.contains(mNo))))) {
+          matched = m;
+          break;
+        }
+      }
+
+      if (matched == null) {
+        for (final line in result.detectedLines) {
+          final cleanLine = line.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+          if (cleanLine.length < 4) continue;
+          for (final m in meters) {
+            final mNo = m.meterNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+            final refNo = m.referenceNo.replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+            if ((mNo.isNotEmpty && cleanLine.contains(mNo)) ||
+                (refNo.isNotEmpty && cleanLine.contains(refNo))) {
+              matched = m;
+              break;
+            }
+          }
+          if (matched != null) break;
+        }
+      }
+    }
+
+    if (matched != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MeterDetailScreen(
+            meter: matched!,
+            initialReading: result.meterReading,
+          ),
+        ),
+      );
+    } else {
+      _showMeterSelectionSheet(context, meters, result.meterReading);
+    }
+  }
+
+  void _showMeterSelectionSheet(
+      BuildContext context, List<MeterModel> meters, int? reading) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Select Meter',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                reading != null
+                    ? 'Detected reading: $reading kWh. Select meter to apply:'
+                    : 'Select the meter you want to open:',
+                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: meters.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (ctx, i) {
+                    final m = meters[i];
+                    return ListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        child: const Icon(Icons.electric_meter_outlined,
+                            color: AppColors.primary),
+                      ),
+                      title: Text(
+                        m.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'Ref: ${m.referenceNo} • ${m.presentReadingKwh} kWh',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textMuted),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                          size: 14, color: AppColors.textMuted),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MeterDetailScreen(
+                              meter: m,
+                              initialReading: reading,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _showExitDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Exit App?'),
+        content: const Text('Are you sure you want to exit MeterPro?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      _DashboardHome(
+        onOpenMeter: _openMeter,
+        onAddMeter: _openAddMeter,
+        onViewBills: () => setState(() => _navIndex = 2),
+        onScanMeter: (meters) => _quickScanMeter(context, meters),
+        onOpenProfile: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        ),
+        themeProvider: widget.themeProvider,
+      ),
+      const UsageScreen(),
+      const BillsScreen(),
+      const ServicesScreen(),
+    ];
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_navIndex != 0) {
+          setState(() => _navIndex = 0);
+          return;
+        }
+        final shouldExit = await _showExitDialog();
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          child: KeyedSubtree(
+            key: ValueKey<int>(_navIndex),
+            child: pages[_navIndex],
+          ),
+        ),
+        floatingActionButton: _navIndex == 0
+            ? StreamBuilder<List<MeterModel>>(
+                stream: MeterRepository.instance.watchMeters(),
+                builder: (context, snapshot) {
+                  final meters = snapshot.data ?? [];
+                  return Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.blueGradient,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.5),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: FloatingActionButton(
+                      onPressed: () => _quickScanMeter(context, meters),
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      child: const Icon(Icons.qr_code_scanner_rounded,
+                          color: Colors.white, size: 26),
+                    ),
+                  );
+                },
+              )
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: MWBottomNavBar(
+          currentIndex: _navIndex,
+          onTap: (i) => setState(() => _navIndex = i),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardHome extends StatelessWidget {
+  final ValueChanged<MeterModel> onOpenMeter;
+  final VoidCallback onAddMeter;
+  final VoidCallback onViewBills;
+  final Function(List<MeterModel>) onScanMeter;
+  final VoidCallback onOpenProfile;
+  final ThemeProvider? themeProvider;
+
+  const _DashboardHome({
+    required this.onOpenMeter,
+    required this.onAddMeter,
+    required this.onViewBills,
+    required this.onScanMeter,
+    required this.onOpenProfile,
+    this.themeProvider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : 'User';
+    final initials = displayName.trim().isEmpty
+        ? '?'
+        : displayName
+            .trim()
+            .split(RegExp(r'\s+'))
+            .map((w) => w[0])
+            .take(2)
+            .join()
+            .toUpperCase();
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning,'
+        : (hour < 17 ? 'Good afternoon,' : 'Good evening,');
+
+    return StreamBuilder<List<MeterModel>>(
+      stream: MeterRepository.instance.watchMeters(),
+      builder: (context, snapshot) {
+        final meters = snapshot.data ?? const <MeterModel>[];
+        final loading = snapshot.connectionState == ConnectionState.waiting;
+
+        return SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.brandGradient,
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(30),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(greeting,
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white70,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w600)),
+                              Text(displayName,
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              if (meters.isNotEmpty) const SizedBox(height: 2),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              // Notification button
+                              GestureDetector(
+                                onTap: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => const NotificationSettingsSheet(),
+                                  );
+                                },
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: onOpenProfile,
+                                borderRadius: BorderRadius.circular(22),
+                                child: CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: AppColors.primaryLight,
+                                  child: Text(initials,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.94, end: 1),
+                        duration: const Duration(milliseconds: 650),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, scale, child) => Transform.scale(
+                          scale: scale,
+                          alignment: Alignment.topCenter,
+                          child: child,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.15),
+                                Colors.white.withValues(alpha: 0.04),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1.2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 30,
+                                offset: const Offset(0, 15),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                            color: AppColors.accentGreen,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                  color: AppColors.accentGreen,
+                                                  blurRadius: 4)
+                                            ]),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text('LIVE STATUS',
+                                          style: TextStyle(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.7),
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 1.5)),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                        '${meters.length} ${meters.length == 1 ? 'METER' : 'METERS'}',
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text('TOTAL CONSUMPTION',
+                                            style: TextStyle(
+                                                color: Color(0x80FFFFFF),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.5)),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.baseline,
+                                          textBaseline: TextBaseline.alphabetic,
+                                          children: [
+                                            Text(
+                                                totalConsumptionKwh(meters)
+                                                    .toStringAsFixed(0),
+                                                style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 44,
+                                                    letterSpacing: -1,
+                                                    fontWeight:
+                                                        FontWeight.w900)),
+                                            const SizedBox(width: 4),
+                                            Text('UNIT',
+                                                style: TextStyle(
+                                                    color: Colors.white
+                                                        .withValues(alpha: 0.4),
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.w600)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.end,
+                                    children: [
+                                      const FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerRight,
+                                        child: Text('ESTIMATED BILL',
+                                            style: TextStyle(
+                                                color: Color(0x80FFFFFF),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.5)),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerRight,
+                                        child: Text(
+                                          _pkr.format(
+                                              totalEstimatedBillPkr(meters)),
+                                          style: const TextStyle(
+                                              color: AppColors.accentOrange,
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w900),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 100),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Your energy',
+                                style: Theme.of(context).textTheme.bodySmall),
+                            const SizedBox(height: 2),
+                            Text('My Meters (${meters.length})',
+                                style: Theme.of(context).textTheme.titleLarge),
+                          ],
+                        ),
+                        TextButton.icon(
+                          onPressed: onAddMeter,
+                          icon: const Icon(Icons.add_circle_outline_rounded,
+                              size: 16),
+                          label: const Text('Add Meter',
+                              style: TextStyle(
+                                  color: AppColors.primaryLight,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (loading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (meters.isEmpty)
+                      _EmptyMetersCard(onAddMeter: onAddMeter)
+                    else
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final width = constraints.maxWidth;
+                          final crossAxisCount = width >= 900
+                              ? 4
+                              : (width >= 600 ? 3 : 2);
+
+                          return GridView.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.78,
+                            ),
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: meters.length,
+                            itemBuilder: (context, index) {
+                              final m = meters[index];
+                              return FadeSlideEntrance(
+                                delay: Duration(milliseconds: 100 * index),
+                                child: MeterCard(
+                                    meter: m, onTap: () => onOpenMeter(m)),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EmptyMetersCard extends StatelessWidget {
+  final VoidCallback onAddMeter;
+  const _EmptyMetersCard({required this.onAddMeter});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text('No meters yet', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Add your first electricity meter to start tracking usage and bills.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onAddMeter,
+            icon: const Icon(Icons.add),
+            label: const Text('Add Meter'),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,8 @@
+- `[x]` FESCO Advanced Integration
+    - `[x]` Add `meterNo` to `MeterModel` in `meter.dart`
+    - `[x]` Implement robust PITC scraper in `add_meter_screen.dart`
+    - `[x]` Add manual entry fields for Name, Meter No, etc. in `add_meter_screen.dart`
+- `[x]` Smart Scanner Matching
+    - `[x]` Use `meterNo` for scanner validation
+    - `[x]` Add "Manual" button to `camera_scanner_screen.dart`
+- `[x]` Verification
