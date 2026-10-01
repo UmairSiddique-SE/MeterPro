@@ -1,4 +1,6 @@
 {
     "download_url":  "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk",
+    "force_update":  false,
+    "release_notes":  "MeterPro 1.0.8 - Accurate FESCO bill calculations, scheduled reminder notifications, and UI improvements.",
     "latest_version":  "1.0.8"
 }

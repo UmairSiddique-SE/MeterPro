@@ -32,7 +32,7 @@ $versionJsonPath = "version.json"
 $versionJson = @{
     latest_version = $version
     download_url = "https://github.com/UmairSiddique-SE/MeterPro/releases/latest/download/MeterPro.apk"
-    release_notes = "MeterPro $version: Accurate FESCO bill calculations, scheduled reminder notifications, and UI improvements."
+    release_notes = "MeterPro $version - Accurate FESCO bill calculations, scheduled reminder notifications, and UI improvements."
     force_update = $false
 } | ConvertTo-Json
 Set-Content -Path $versionJsonPath -Value $versionJson
