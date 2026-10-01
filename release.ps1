@@ -51,12 +51,13 @@ if (Test-Path $indexPath) {
 
 # 4. Flutter Analyze, Test & Build Signed Release APK
 Write-Host "`n[1/4] Building signed APK release..." -ForegroundColor Cyan
+Remove-Item -Path "build\app\intermediates\flutter" -Recurse -Force -ErrorAction SilentlyContinue
 flutter pub get
 flutter analyze
 if ($LASTEXITCODE -ne 0) { Write-Host "Flutter analyze failed!" -ForegroundColor Red; exit $LASTEXITCODE }
 flutter test
 if ($LASTEXITCODE -ne 0) { Write-Host "Flutter test failed!" -ForegroundColor Red; exit $LASTEXITCODE }
-flutter build apk --release
+flutter build apk --release --no-tree-shake-icons
 if ($LASTEXITCODE -ne 0) { Write-Host "Flutter build failed!" -ForegroundColor Red; exit $LASTEXITCODE }
 
 $apkSource = "build/app/outputs/flutter-apk/app-release.apk"
