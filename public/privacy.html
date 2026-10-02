@@ -4,18 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Privacy Policy — MeterPro</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #14161a;
-    --bg-panel: #1c1f25;
-    --line: #2b2f37;
-    --text: #ece8df;
-    --text-dim: #9a9fa8;
-    --amber: #ffb020;
-    --copper: #c17a42;
+    --bg: #070B19;
+    --bg-panel: #0F172A;
+    --line: rgba(255, 255, 255, 0.08);
+    --text: #F8FAFC;
+    --text-dim: #94A3B8;
+    --amber: #FACC15;
+    --primary: #1D4ED8;
     --wrap: 780px;
   }
   *{ box-sizing:border-box; }
@@ -30,11 +31,14 @@
 
   header.nav{
     border-bottom: 1px solid var(--line);
-    padding: 20px 0;
+    padding: 18px 0;
+    background: rgba(7, 11, 25, 0.85);
+    backdrop-filter: blur(12px);
   }
   .nav-inner{ display:flex; align-items:center; justify-content: space-between; }
   .brand{ display:flex; align-items:center; gap:10px; }
-  .brand-name{ font-family:'Big Shoulders Display'; font-weight:800; font-size:20px; text-transform:uppercase; }
+  .brand-logo{ width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
+  .brand-name{ font-family:'Outfit'; font-weight:800; font-size:20px; }
   .brand-name span{ color: var(--amber); }
   .back{ font-size: 13.5px; color: var(--text-dim); }
   .back:hover{ color: var(--text); text-decoration:none; }
@@ -72,10 +76,7 @@
 <header class="nav">
   <div class="wrap nav-inner">
     <div class="brand">
-      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="14" stroke="#ffb020" stroke-width="2"/>
-        <path d="M16 9v7l5 3" stroke="#ffb020" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <img src="assets/images/logo.png" alt="MeterPro Logo" class="brand-logo">
       <span class="brand-name">Meter<span>Pro</span></span>
     </div>
     <a class="back" href="index.html">&larr; Back to MeterPro</a>
