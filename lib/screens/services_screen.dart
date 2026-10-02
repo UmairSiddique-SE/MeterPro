@@ -178,7 +178,7 @@ class ServicesScreen extends StatelessWidget {
                     ScaffoldMessenger.of(ctx).showSnackBar(
                       SnackBar(
                         content: Text(
-                          '⚡ Reminder set for $dayText at $formattedTime ($frequency).',
+                          'Reminder set for $dayText at $formattedTime ($frequency).',
                         ),
                         backgroundColor: AppColors.primary,
                       ),
@@ -186,43 +186,6 @@ class ServicesScreen extends StatelessWidget {
                   },
                   child: const Text('Save Notification Settings'),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.alarm_on_rounded, size: 16),
-                      label: const Text('Test 10s Alarm', style: TextStyle(fontSize: 12)),
-                      onPressed: () async {
-                        await ReminderService.instance.scheduleQuickTest(seconds: 10);
-                        if (!ctx.mounted) return;
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('⚡ Alarm scheduled! Lock your phone or wait 10 seconds.'),
-                            duration: Duration(seconds: 4),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.notifications_active_rounded, size: 16),
-                      label: const Text('Instant Test', style: TextStyle(fontSize: 12)),
-                      onPressed: () async {
-                        await ReminderService.instance.showTestNotification();
-                        if (!ctx.mounted) return;
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('Instant test notification sent!'),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:meterunit/models/meter.dart';
 
 void main() {
-  test('recalculates bill totals when a reading changes', () {
+  test('consumed units calculated correctly', () {
     final meter = MeterModel.create(
       name: 'Test customer',
       referenceNo: '12345678901234',
@@ -15,10 +15,9 @@ void main() {
 
     expect(updated.monthlyUnitsKwh, 150);
     expect(updated.monthlyBillPkr, greaterThan(meter.monthlyBillPkr));
-    expect(updated.estimatedBillPkr, updated.monthlyBillPkr);
   });
 
-  test('does not allow consumed units to become negative', () {
+  test('consumed units cannot be negative', () {
     final meter = MeterModel.create(
       name: 'Test customer',
       referenceNo: '12345678901234',

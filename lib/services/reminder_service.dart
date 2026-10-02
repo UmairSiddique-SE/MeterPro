@@ -213,7 +213,7 @@ class ReminderService {
       try {
         await _localNotifications.zonedSchedule(
           1,
-          'Check your meter reading ⚡',
+          'Check your meter reading',
           settings.billReminders && settings.highUsageAlert
               ? 'Your meter reminder is ready. Record your reading to keep your bill accurate.'
               : 'Time to check your meter reading and record units.',
@@ -232,7 +232,7 @@ class ReminderService {
         try {
           await _localNotifications.zonedSchedule(
             1,
-            'Check your meter reading ⚡',
+            'Check your meter reading',
             settings.billReminders && settings.highUsageAlert
                 ? 'Your meter reminder is ready. Record your reading to keep your bill accurate.'
                 : 'Time to check your meter reading and record units.',
@@ -250,7 +250,7 @@ class ReminderService {
           debugPrint('exactAllowWhileIdle fallback: $exactErr');
           await _localNotifications.zonedSchedule(
             1,
-            'Check your meter reading ⚡',
+            'Check your meter reading',
             'Time to check your meter reading.',
             scheduled,
             details,
@@ -272,99 +272,4 @@ class ReminderService {
     }
   }
 
-  /// Schedules a real background alarm to fire after [seconds] seconds.
-  /// Useful to immediately verify that background scheduled notifications work on this device.
-  Future<void> scheduleQuickTest({int seconds = 10}) async {
-    try {
-      if (!_initialized) await initialize();
-      await _ensureAndroidPermissions();
-
-      final scheduled = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
-
-      const androidDetails = AndroidNotificationDetails(
-        'meterpro_reminders',
-        'MeterPro Reminders',
-        channelDescription: 'Daily and weekly meter reading reminders.',
-        importance: Importance.max,
-        priority: Priority.max,
-        icon: '@mipmap/ic_launcher',
-        enableVibration: true,
-        playSound: true,
-        category: AndroidNotificationCategory.alarm,
-      );
-
-      const details = NotificationDetails(
-        android: androidDetails,
-        iOS: DarwinNotificationDetails(),
-      );
-
-      try {
-        await _localNotifications.zonedSchedule(
-          999,
-          'Meter Reading Reminder ⚡',
-          'Scheduled alarm test succeeded! Time to check your meter.',
-          scheduled,
-          details,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          androidScheduleMode: AndroidScheduleMode.alarmClock,
-          payload: 'quick_test_reminder',
-        );
-      } catch (_) {
-        await _localNotifications.zonedSchedule(
-          999,
-          'Meter Reading Reminder ⚡',
-          'Scheduled alarm test succeeded! Time to check your meter.',
-          scheduled,
-          details,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          payload: 'quick_test_reminder',
-        );
-      }
-    } catch (e) {
-      debugPrint('Error in scheduleQuickTest: $e');
-    }
-  }
-
-  Future<void> showTestNotification() async {
-    try {
-      final androidPlugin =
-          _localNotifications.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      if (androidPlugin != null) {
-        await androidPlugin.requestNotificationsPermission();
-        try {
-          await androidPlugin.requestExactAlarmsPermission();
-        } catch (_) {
-          debugPrint('Exact alarm permission not available for this device.');
-        }
-      }
-
-      const androidDetails = AndroidNotificationDetails(
-        'meterpro_reminders',
-        'MeterPro Reminders',
-        channelDescription: 'Daily and weekly meter reading reminders.',
-        importance: Importance.max,
-        priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
-      );
-
-      const details = NotificationDetails(
-        android: androidDetails,
-        iOS: DarwinNotificationDetails(),
-      );
-
-      await _localNotifications.show(
-        99,
-        'Check your meter reading',
-        'Test reminder: Time to check your meter reading!',
-        details,
-        payload: 'test_notification',
-      );
-    } catch (e) {
-      debugPrint('Error showing test notification: $e');
-    }
-  }
 }
