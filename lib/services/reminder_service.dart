@@ -111,7 +111,7 @@ class ReminderService {
 
     // Explicitly create notification channel for Android 8.0+
     const androidChannel = AndroidNotificationChannel(
-      'meterpro_reminders_v3',
+      'meterpro_reminders_v4',
       'MeterPro Reminders',
       description: 'Daily meter reading alerts and scheduled reminders.',
       importance: Importance.max,
@@ -220,7 +220,11 @@ class ReminderService {
         iOS: iosDetails,
       );
 
-      // Use alarmClock mode without matchDateTimeComponents for 100% Android alarm accuracy
+      // Schedule with daily repeat using matchDateTimeComponents
+      final repeatComponent = settings.frequency == 'Weekly'
+          ? DateTimeComponents.dayOfWeekAndTime
+          : DateTimeComponents.time;
+
       try {
         await _localNotifications.zonedSchedule(
           1,
@@ -233,6 +237,7 @@ class ReminderService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
           androidScheduleMode: AndroidScheduleMode.alarmClock,
+          matchDateTimeComponents: repeatComponent,
           payload: 'meterpro_reminder',
         );
       } catch (alarmClockErr) {
@@ -249,6 +254,7 @@ class ReminderService {
             uiLocalNotificationDateInterpretation:
                 UILocalNotificationDateInterpretation.absoluteTime,
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            matchDateTimeComponents: repeatComponent,
             payload: 'meterpro_reminder',
           );
         } catch (exactErr) {
@@ -262,6 +268,7 @@ class ReminderService {
             uiLocalNotificationDateInterpretation:
                 UILocalNotificationDateInterpretation.absoluteTime,
             androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            matchDateTimeComponents: repeatComponent,
             payload: 'meterpro_reminder',
           );
         }
