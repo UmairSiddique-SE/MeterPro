@@ -115,12 +115,41 @@ class ReminderService {
 
     _initialized = true;
 
-    // Android removes scheduled alarms when the device restarts. Restore the
-    // user's reminder after plugin setup so reminders survive a reboot/update.
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_prefKey);
-    if (saved != null) {
-      await scheduleReminder(await loadSettings());
+    // Always ensure a reminder is scheduled on app start (survives reboot/update/first run)
+    await scheduleReminder(await loadSettings());
+  }
+
+  Future<void> showTestNotification() async {
+    try {
+      if (!_initialized) await initialize();
+      await _ensureAndroidPermissions();
+
+      const androidDetails = AndroidNotificationDetails(
+        'meterpro_reminders_v2',
+        'MeterPro Reminders',
+        channelDescription: 'Daily and weekly meter reading reminders.',
+        importance: Importance.max,
+        priority: Priority.max,
+        icon: '@mipmap/ic_launcher',
+        playSound: true,
+        enableVibration: true,
+        category: AndroidNotificationCategory.reminder,
+        visibility: NotificationVisibility.public,
+      );
+
+      const details = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      );
+
+      await _localNotifications.show(
+        99,
+        '⚡ MeterPro: Notification Test',
+        'Reminders bilkul sahi set hain! Aap ko rozana reminder notification milega.',
+        details,
+      );
+    } catch (e) {
+      debugPrint('Error showing test notification: $e');
     }
   }
 
@@ -129,6 +158,7 @@ class ReminderService {
     final raw = prefs.getString(_prefKey);
     if (raw == null) {
       return const ReminderSettings(
+        enabled: true,
         reminderTime: TimeOfDay(hour: 9, minute: 0),
       );
     }
@@ -137,12 +167,14 @@ class ReminderService {
       final decoded = jsonDecode(raw);
       if (decoded is! Map<String, dynamic>) {
         return const ReminderSettings(
+          enabled: true,
           reminderTime: TimeOfDay(hour: 9, minute: 0),
         );
       }
       return ReminderSettings.fromMap(decoded);
     } catch (_) {
       return const ReminderSettings(
+        enabled: true,
         reminderTime: TimeOfDay(hour: 9, minute: 0),
       );
     }
@@ -184,7 +216,7 @@ class ReminderService {
       }
 
       const androidDetails = AndroidNotificationDetails(
-        'meterpro_reminders',
+        'meterpro_reminders_v2',
         'MeterPro Reminders',
         channelDescription: 'Daily and weekly meter reading reminders.',
         importance: Importance.max,
@@ -193,7 +225,7 @@ class ReminderService {
         ticker: 'MeterPro reminder',
         enableVibration: true,
         playSound: true,
-        category: AndroidNotificationCategory.alarm,
+        category: AndroidNotificationCategory.reminder,
         visibility: NotificationVisibility.public,
         fullScreenIntent: false,
       );
@@ -209,49 +241,31 @@ class ReminderService {
         iOS: iosDetails,
       );
 
-      // Try alarmClock mode first (highest reliability, immune to Vivo/Samsung/Xiaomi Doze freeze)
+      // Schedule exact allow while idle or fallback
       try {
         await _localNotifications.zonedSchedule(
           1,
-          'Check your meter reading',
+          '⚡ MeterPro Reminder',
           settings.billReminders && settings.highUsageAlert
-              ? 'Your meter reminder is ready. Record your reading to keep your bill accurate.'
-              : 'Time to check your meter reading and record units.',
+              ? 'Apna bijli ka meter reading check karein aur units record karein.'
+              : 'Time to check your electricity meter reading and record units.',
           scheduled,
           details,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
-          androidScheduleMode: AndroidScheduleMode.alarmClock,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           matchDateTimeComponents: settings.frequency == 'Weekly'
               ? DateTimeComponents.dayOfWeekAndTime
               : DateTimeComponents.time,
           payload: 'meterpro_reminder',
         );
-      } catch (alarmClockErr) {
-        debugPrint('alarmClock mode fallback: $alarmClockErr');
+      } catch (exactErr) {
+        debugPrint('exactAllowWhileIdle fallback to inexact: $exactErr');
         try {
           await _localNotifications.zonedSchedule(
             1,
-            'Check your meter reading',
-            settings.billReminders && settings.highUsageAlert
-                ? 'Your meter reminder is ready. Record your reading to keep your bill accurate.'
-                : 'Time to check your meter reading and record units.',
-            scheduled,
-            details,
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            matchDateTimeComponents: settings.frequency == 'Weekly'
-                ? DateTimeComponents.dayOfWeekAndTime
-                : DateTimeComponents.time,
-            payload: 'meterpro_reminder',
-          );
-        } catch (exactErr) {
-          debugPrint('exactAllowWhileIdle fallback: $exactErr');
-          await _localNotifications.zonedSchedule(
-            1,
-            'Check your meter reading',
-            'Time to check your meter reading.',
+            '⚡ MeterPro Reminder',
+            'Apna bijli ka meter reading check karein aur units record karein.',
             scheduled,
             details,
             uiLocalNotificationDateInterpretation:
@@ -262,6 +276,8 @@ class ReminderService {
                 : DateTimeComponents.time,
             payload: 'meterpro_reminder',
           );
+        } catch (inexactErr) {
+          debugPrint('inexact fallback error: $inexactErr');
         }
       }
 
