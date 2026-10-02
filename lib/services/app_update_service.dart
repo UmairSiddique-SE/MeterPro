@@ -62,11 +62,13 @@ class AppUpdateService {
 
   /// Returns negative if a < b, 0 if equal, positive if a > b
   int _versionCompare(String a, String b) {
-    final pa = a.split('.').map(int.tryParse).toList();
-    final pb = b.split('.').map(int.tryParse).toList();
-    for (int i = 0; i < pa.length || i < pb.length; i++) {
-      final va = i < pa.length ? (pa[i] ?? 0) : 0;
-      final vb = i < pb.length ? (pb[i] ?? 0) : 0;
+    String clean(String v) => v.toLowerCase().replaceAll('v', '').split('+').first.trim();
+    final pa = clean(a).split('.').map((s) => int.tryParse(s.replaceAll(RegExp(r'\D'), '')) ?? 0).toList();
+    final pb = clean(b).split('.').map((s) => int.tryParse(s.replaceAll(RegExp(r'\D'), '')) ?? 0).toList();
+    final len = pa.length > pb.length ? pa.length : pb.length;
+    for (int i = 0; i < len; i++) {
+      final va = i < pa.length ? pa[i] : 0;
+      final vb = i < pb.length ? pb[i] : 0;
       if (va != vb) return va - vb;
     }
     return 0;
