@@ -6,7 +6,6 @@ import '../models/meter.dart';
 import '../services/reminder_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/animation_utils.dart';
-import 'meters_screen.dart';
 
 final _pkr = NumberFormat.currency(locale: 'en_US', symbol: 'Rs ', decimalDigits: 0);
 final _pkrDec = NumberFormat.currency(locale: 'en_US', symbol: 'Rs ', decimalDigits: 2);
@@ -184,6 +183,23 @@ class ServicesScreen extends StatelessWidget {
                   child: const Text('Save Notification Settings'),
                 ),
               ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.notifications_active_rounded, size: 18),
+                  label: const Text('Send Test Notification'),
+                  onPressed: () async {
+                    await ReminderService.instance.showTestNotification();
+                    if (!ctx.mounted) return;
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(
+                        content: Text('Test notification sent!'),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),
@@ -299,21 +315,47 @@ class ServicesScreen extends StatelessWidget {
                   child: ListView(
                     children: [
                       _calcRow('Base Energy', breakdown.baseEnergyCost),
-                      _calcRow('Fixed Charges', breakdown.fixedCharge),
-                      if (breakdown.subsidy != 0) _calcRow('Subsidy', breakdown.subsidy, color: Colors.green),
-                      _calcRow('ED (Duty)', breakdown.electricityDuty),
-                      _calcRow('Sales Tax', breakdown.salesTax),
+                      _calcRow('Fixed Charges ($load kW)', breakdown.fixedCharge),
+                      if (breakdown.subsidy != 0) _calcRow('Govt. Subsidy', breakdown.subsidy, color: Colors.green),
+                      _calcRow('Net Electricity Charges', breakdown.netEnergyCharges, isBold: true),
+                      const SizedBox(height: 8),
+                      const Text('TAXES & SURCHARGES',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textMuted,
+                              letterSpacing: 0.8)),
+                      const SizedBox(height: 4),
+                      _calcRow('Electricity Duty (ED)', breakdown.electricityDuty),
+                      _calcRow('FC Surcharge', breakdown.fcSurcharge),
+                      if (breakdown.salesTax > 0) _calcRow('Sales Tax / GST', breakdown.salesTax),
                       _calcRow('TV Fee', breakdown.tvFee),
-                      const Divider(height: 32),
+                      _calcRow('Current Bill', breakdown.currentBill, isBold: true),
+                      _calcRow('Fuel Adjustment (FPA)', breakdown.fuelPriceAdjustment),
+                      const Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('ESTIMATED TOTAL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                          Text(_pkr.format(breakdown.totalBillPkr), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.accentOrange)),
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('PAYABLE WITHIN DUE DATE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                              Text('Total Estimated Bill', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                            ],
+                          ),
+                          Text(_pkr.format(breakdown.totalBillPkr), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: AppColors.accentOrange)),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      const Text('* Rates are based on latest FESCO tariff slabs.', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Payable After Due Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          Text(_pkr.format(breakdown.payableAfterDueDate), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('* Rates based on NEPRA 2024-2026 tariff & latest FESCO consumer bill formulas.', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
                     ],
                   ),
                 ),
@@ -385,22 +427,9 @@ class ServicesScreen extends StatelessWidget {
               () => _showBillCalculator(context),
             ),
           ),
+
           FadeSlideEntrance(
             delay: const Duration(milliseconds: 350),
-            child: _serviceCard(
-              context,
-              Icons.electric_meter_rounded,
-              'Manage Meters',
-              'View, edit, or remove your registered electricity meters.',
-              AppColors.primary,
-              () => Navigator.push(
-                context,
-                SmoothPageRoute(child: const MetersScreen()),
-              ),
-            ),
-          ),
-          FadeSlideEntrance(
-            delay: const Duration(milliseconds: 400),
             child: _serviceCard(
               context,
               Icons.notifications_active_rounded,
@@ -519,14 +548,22 @@ class ServicesScreen extends StatelessWidget {
     );
   }
 
-  Widget _calcRow(String label, double val, {Color? color}) {
+  Widget _calcRow(String label, double val, {Color? color, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-          Text(_pkrDec.format(val), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color ?? const Color(0xFF0F172A))),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                  color: isBold ? const Color(0xFF0F172A) : AppColors.textSecondary)),
+          Text(_pkrDec.format(val),
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: color ?? const Color(0xFF0F172A))),
         ],
       ),
     );
