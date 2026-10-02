@@ -230,7 +230,7 @@ class ReminderService {
           1,
           'MeterPro Reminder',
           settings.billReminders && settings.highUsageAlert
-              ? 'Apna bijli ka meter reading check karein aur units record karein.'
+              ? 'check your electricity meter reading and record units.'
               : 'Time to check your electricity meter reading and record units.',
           scheduledTz,
           details,
