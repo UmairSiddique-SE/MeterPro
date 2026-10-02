@@ -169,14 +169,18 @@ class ServicesScreen extends StatelessWidget {
                       frequency: frequency,
                       reminderTime: reminderTime,
                     );
+                    final scheduledAt = await ReminderService.instance.scheduleReminder(settings);
                     await ReminderService.instance.saveSettings(settings);
                     if (!ctx.mounted) return;
                     Navigator.pop(ctx);
+                    final isToday = scheduledAt.day == DateTime.now().day;
+                    final dayText = isToday ? 'Today' : 'Tomorrow';
                     ScaffoldMessenger.of(ctx).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Reminders set for $frequency at $formattedTime.',
+                          '⚡ Reminder set for $dayText at $formattedTime ($frequency).',
                         ),
+                        backgroundColor: AppColors.primary,
                       ),
                     );
                   },
@@ -184,21 +188,41 @@ class ServicesScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.notifications_active_rounded, size: 18),
-                  label: const Text('Send Test Notification'),
-                  onPressed: () async {
-                    await ReminderService.instance.showTestNotification();
-                    if (!ctx.mounted) return;
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(
-                        content: Text('Test notification sent!'),
-                      ),
-                    );
-                  },
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.alarm_on_rounded, size: 16),
+                      label: const Text('Test 10s Alarm', style: TextStyle(fontSize: 12)),
+                      onPressed: () async {
+                        await ReminderService.instance.scheduleQuickTest(seconds: 10);
+                        if (!ctx.mounted) return;
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('⚡ Alarm scheduled! Lock your phone or wait 10 seconds.'),
+                            duration: Duration(seconds: 4),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.notifications_active_rounded, size: 16),
+                      label: const Text('Instant Test', style: TextStyle(fontSize: 12)),
+                      onPressed: () async {
+                        await ReminderService.instance.showTestNotification();
+                        if (!ctx.mounted) return;
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Instant test notification sent!'),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

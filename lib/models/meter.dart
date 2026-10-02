@@ -127,7 +127,7 @@ BillBreakdown calculateBillBreakdown(int units,
     } else if (units <= 200) {
       const rate1 = 11.17;
       const rate2 = 13.6338;
-      final cost1 = 100 * rate1;
+      const cost1 = 100 * rate1;
       final units2 = units - 100;
       final cost2 = units2 * rate2;
       baseEnergyCost = cost1 + cost2;
