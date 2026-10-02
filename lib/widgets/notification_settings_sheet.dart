@@ -257,41 +257,76 @@ class _NotificationSettingsSheetState extends State<NotificationSettingsSheet> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Test Notification button
-                SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: () async {
-                      await ReminderService.instance.showTestNotification();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Test notification sent! Check your notification bar.'),
-                            backgroundColor: AppColors.primary,
-                            duration: Duration(seconds: 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary, width: 1.2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                           ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.notifications_active_outlined, size: 20),
-                    label: Text(
-                      'Send Test Notification',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                          onPressed: () async {
+                            await ReminderService.instance.showTestNotification();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Instant test sent! Check notification bar.'),
+                                  backgroundColor: AppColors.primary,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.flash_on_rounded, size: 17),
+                          label: const Text(
+                            'Instant Test',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.accentOrange,
+                            side: const BorderSide(color: AppColors.accentOrange, width: 1.2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                          ),
+                          onPressed: () async {
+                            await ReminderService.instance.scheduleQuickTestReminder();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Scheduled for 1 min from now! Lock phone & test.'),
+                                  backgroundColor: AppColors.accentOrange,
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.timer_outlined, size: 17),
+                          label: const Text(
+                            'Test in 1 Min',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 // Save button
                 SizedBox(
                   width: double.infinity,
