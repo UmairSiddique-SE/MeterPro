@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -352,7 +353,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _DashboardHome extends StatelessWidget {
+class _DashboardHome extends StatefulWidget {
   final ValueChanged<MeterModel> onOpenMeter;
   final VoidCallback onAddMeter;
   final VoidCallback onViewBills;
@@ -370,6 +371,54 @@ class _DashboardHome extends StatelessWidget {
   });
 
   @override
+  State<_DashboardHome> createState() => _DashboardHomeState();
+}
+
+class _DashboardHomeState extends State<_DashboardHome> {
+  Timer? _timer;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        setState(() => _now = DateTime.now());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _getGreeting(int hour) {
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning,';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon,';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good evening,';
+    } else {
+      return 'Good night,';
+    }
+  }
+
+  String _getGreetingEmoji(int hour) {
+    if (hour >= 5 && hour < 12) {
+      return '☀️';
+    } else if (hour >= 12 && hour < 17) {
+      return '🌤️';
+    } else if (hour >= 17 && hour < 21) {
+      return '🌇';
+    } else {
+      return '🌙';
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName?.trim().isNotEmpty == true
@@ -384,10 +433,9 @@ class _DashboardHome extends StatelessWidget {
             .take(2)
             .join()
             .toUpperCase();
-    final hour = DateTime.now().hour;
-    final greeting = hour < 12
-        ? 'Good morning,'
-        : (hour < 17 ? 'Good afternoon,' : 'Good evening,');
+    final hour = _now.hour;
+    final greeting = _getGreeting(hour);
+    final emoji = _getGreetingEmoji(hour);
 
     return StreamBuilder<List<MeterModel>>(
       stream: MeterRepository.instance.watchMeters(),
@@ -416,18 +464,66 @@ class _DashboardHome extends StatelessWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(greeting,
-                                  style: GoogleFonts.poppins(
+                              Row(
+                                children: [
+                                  Text(
+                                    greeting,
+                                    style: GoogleFonts.poppins(
                                       color: Colors.white70,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w600)),
-                              Text(displayName,
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    emoji,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                displayName,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.access_time_rounded,
+                                      size: 13,
+                                      color: Colors.white70,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      DateFormat('hh:mm a • EEE, d MMM').format(_now),
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               if (meters.isNotEmpty) const SizedBox(height: 2),
                             ],
                           ),
