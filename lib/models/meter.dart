@@ -134,7 +134,7 @@ BillBreakdown calculateBillBreakdown(int units,
       // Fixed charge is Rs 300 per kW sanctioned load
       fixedCharge = load * 300.0;
       subsidy = -1 * (2400.0 + (units2 * 16.05));
-      slabs.add(SlabDetail(
+      slabs.add(const SlabDetail(
         rangeLabel: 'Protected 1-100 kWh',
         unitsInSlab: 100,
         ratePerUnit: rate1,

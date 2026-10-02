@@ -558,7 +558,7 @@ class _DashboardHomeState extends State<_DashboardHome> {
                                 ),
                               ),
                               InkWell(
-                                onTap: onOpenProfile,
+                                onTap: widget.onOpenProfile,
                                 borderRadius: BorderRadius.circular(22),
                                 child: CircleAvatar(
                                   radius: 20,
@@ -773,7 +773,7 @@ class _DashboardHomeState extends State<_DashboardHome> {
                           ],
                         ),
                         TextButton.icon(
-                          onPressed: onAddMeter,
+                          onPressed: widget.onAddMeter,
                           icon: const Icon(Icons.add_circle_outline_rounded,
                               size: 16),
                           label: const Text('Add Meter',
@@ -790,7 +790,7 @@ class _DashboardHomeState extends State<_DashboardHome> {
                         child: Center(child: CircularProgressIndicator()),
                       )
                     else if (meters.isEmpty)
-                      _EmptyMetersCard(onAddMeter: onAddMeter)
+                      _EmptyMetersCard(onAddMeter: widget.onAddMeter)
                     else
                       LayoutBuilder(
                         builder: (context, constraints) {
@@ -815,7 +815,7 @@ class _DashboardHomeState extends State<_DashboardHome> {
                               return FadeSlideEntrance(
                                 delay: Duration(milliseconds: 100 * index),
                                 child: MeterCard(
-                                    meter: m, onTap: () => onOpenMeter(m)),
+                                    meter: m, onTap: () => widget.onOpenMeter(m)),
                               );
                             },
                           );
