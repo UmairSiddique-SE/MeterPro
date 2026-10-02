@@ -911,7 +911,45 @@
     color: var(--text-dim);
   }
 
-  /* ── Responsive ── */
+  /* ── Smooth Scroll Reveal Animations ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(35px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+
+  .reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal-scale.active {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Shimmer button effect */
+  .btn-primary {
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transition: left 0.6s ease;
+  }
+  .btn-primary:hover::after {
+    left: 100%;
+  }
+
   @media (max-width: 960px) {
     .hero-grid { grid-template-columns: 1fr; gap: 48px; }
     .features-grid { grid-template-columns: 1fr; }
@@ -1014,9 +1052,9 @@
 </section>
 
 <!-- ===== INTERACTIVE BILL ESTIMATOR ===== -->
-<section class="calculator-section" id="calculator">
+<section class="calculator-section reveal" id="calculator">
   <div class="wrap">
-    <div class="calc-card">
+    <div class="calc-card reveal-scale">
       <div>
         <div class="badge-tag" style="margin-bottom:12px;">Live Preview Widget</div>
         <div class="calc-header">
@@ -1044,7 +1082,7 @@
 </section>
 
 <!-- ===== SCANNER SIMULATION ===== -->
-<section class="scanner-section" id="scanner">
+<section class="scanner-section reveal" id="scanner">
   <div class="wrap">
     <div class="scanner-grid">
       <div>
@@ -1069,7 +1107,7 @@
       </div>
 
       <!-- Scanner HUD -->
-      <div class="scanner-hud">
+      <div class="scanner-hud reveal-scale">
         <div class="scanner-frame">
           <div class="scanner-laser"></div>
           <div class="scanner-target">
@@ -1091,7 +1129,7 @@
 </section>
 
 <!-- ===== CORE FEATURES ===== -->
-<section class="features-section" id="features">
+<section class="features-section reveal" id="features">
   <div class="wrap">
     <div class="section-head">
       <div class="badge-tag">Feature Suite</div>
@@ -1100,37 +1138,37 @@
     </div>
 
     <div class="features-grid">
-      <div class="feature-box">
+      <div class="feature-box reveal">
         <div class="feature-icon-circle">📸</div>
         <h3>AI Camera OCR</h3>
         <p>Instant digit recognition scans physical dials and displays into digital units with one tap.</p>
       </div>
 
-      <div class="feature-box">
+      <div class="feature-box reveal">
         <div class="feature-icon-circle">⚡</div>
         <h3>Tariff Slabs Calculator</h3>
         <p>Dynamic estimation factoring in protected/unprotected rates, GST, TV fee, and fuel adjustments.</p>
       </div>
 
-      <div class="feature-box">
+      <div class="feature-box reveal">
         <div class="feature-icon-circle">⏰</div>
         <h3>Scheduled Notifications</h3>
         <p>Reliable daily reminders (Morning, Evening, or Night) so you never miss recording a unit.</p>
       </div>
 
-      <div class="feature-box">
+      <div class="feature-box reveal">
         <div class="feature-icon-circle">📊</div>
         <h3>Analytics &amp; Trend Charts</h3>
         <p>Visual bar and line charts track daily consumption spikes to pinpoint heavy appliances.</p>
       </div>
 
-      <div class="feature-box">
+      <div class="feature-box reveal">
         <div class="feature-icon-circle">🏢</div>
         <h3>Multi-Meter Portions</h3>
         <p>Organize separate meters for upper floors, shops, tenants, or solar net-metering in one place.</p>
       </div>
 
-      <div class="feature-box">
+      <div class="feature-box reveal">
         <div class="feature-icon-circle">☁️</div>
         <h3>Cloud Sync &amp; Backup</h3>
         <p>Seamless Firebase cloud synchronization ensures your history is never lost across phones.</p>
@@ -1140,9 +1178,9 @@
 </section>
 
 <!-- ===== DOWNLOAD SECTION ===== -->
-<section class="download-section" id="download">
+<section class="download-section reveal" id="download">
   <div class="wrap">
-    <div class="download-banner">
+    <div class="download-banner reveal-scale">
       <div class="download-left">
         <div class="badge-tag">Download &amp; Install</div>
         <h2>Get MeterPro Free on Android</h2>
@@ -1237,6 +1275,21 @@
     const el = document.getElementById('scanner-digits');
     if (el) el.textContent = dummyReadings[readIdx];
   }, 3200);
+
+  // Intersection Observer for scroll animations
+  document.addEventListener('DOMContentLoaded', () => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal, .reveal-scale').forEach(el => {
+      observer.observe(el);
+    });
+  });
 </script>
 
 </body>
