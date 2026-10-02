@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -57,17 +58,26 @@ class ReminderService {
   Future<void> _ensureAndroidPermissions() async {
     if (!Platform.isAndroid) return;
 
+    try {
+      if (await Permission.notification.isDenied) {
+        await Permission.notification.request();
+      }
+    } catch (_) {}
+
+    try {
+      if (await Permission.scheduleExactAlarm.isDenied) {
+        await Permission.scheduleExactAlarm.request();
+      }
+    } catch (_) {}
+
     final androidPlugin =
         _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin == null) return;
-
-    await androidPlugin.requestNotificationsPermission();
-
-    try {
-      await androidPlugin.requestExactAlarmsPermission();
-    } catch (_) {
-      debugPrint('Exact alarm permission check skipped.');
+    if (androidPlugin != null) {
+      try {
+        await androidPlugin.requestNotificationsPermission();
+        await androidPlugin.requestExactAlarmsPermission();
+      } catch (_) {}
     }
   }
 
