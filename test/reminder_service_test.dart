@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:meterunit/services/reminder_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -17,7 +16,7 @@ void main() {
   group('ReminderService & Schedule Math Verification', () {
     test('Future time today schedules for today', () {
       final now = DateTime(2026, 10, 2, 10, 0, 0); // 10:00 AM
-      final reminderTime = const TimeOfDay(hour: 14, minute: 30); // 2:30 PM
+      const reminderTime = TimeOfDay(hour: 14, minute: 30); // 2:30 PM
 
       var scheduledDate = DateTime(
         now.year,
@@ -41,7 +40,7 @@ void main() {
 
     test('Past time today schedules for tomorrow', () {
       final now = DateTime(2026, 10, 2, 23, 15, 0); // 11:15 PM
-      final reminderTime = const TimeOfDay(hour: 9, minute: 0); // 9:00 AM
+      const reminderTime = TimeOfDay(hour: 9, minute: 0); // 9:00 AM
 
       var scheduledDate = DateTime(
         now.year,
