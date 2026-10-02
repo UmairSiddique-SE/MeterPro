@@ -154,13 +154,13 @@ class ReminderService {
     await scheduleReminder(settings);
   }
 
-  Future<void> scheduleReminder(ReminderSettings settings) async {
+  Future<DateTime> scheduleReminder(ReminderSettings settings) async {
     try {
       if (!_initialized) await initialize();
       await _localNotifications.cancelAll();
 
       if (!settings.enabled) {
-        return;
+        return DateTime.now();
       }
 
       await _ensureAndroidPermissions();
@@ -173,9 +173,11 @@ class ReminderService {
         now.day,
         settings.reminderTime.hour,
         settings.reminderTime.minute,
+        0,
       );
 
-      if (scheduled.isBefore(now)) {
+      // If scheduled time is in the past (more than 5 seconds ago), schedule for next occurrence
+      if (scheduled.isBefore(now.subtract(const Duration(seconds: 5)))) {
         scheduled = scheduled.add(
           Duration(days: settings.frequency == 'Weekly' ? 7 : 1),
         );
@@ -186,59 +188,143 @@ class ReminderService {
         'MeterPro Reminders',
         channelDescription: 'Daily and weekly meter reading reminders.',
         importance: Importance.max,
-        priority: Priority.high,
+        priority: Priority.max,
         icon: '@mipmap/ic_launcher',
         ticker: 'MeterPro reminder',
         enableVibration: true,
         playSound: true,
-        category: AndroidNotificationCategory.reminder,
+        category: AndroidNotificationCategory.alarm,
         visibility: NotificationVisibility.public,
+        fullScreenIntent: false,
       );
 
-      const iosDetails = DarwinNotificationDetails();
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
       const details = NotificationDetails(
         android: androidDetails,
         iOS: iosDetails,
       );
 
+      // Try alarmClock mode first (highest reliability, immune to Vivo/Samsung/Xiaomi Doze freeze)
       try {
         await _localNotifications.zonedSchedule(
           1,
-          'Check your meter reading',
+          'Check your meter reading ⚡',
           settings.billReminders && settings.highUsageAlert
-              ? 'Your meter reminder is ready. Check reading and usage.'
-              : 'Time to check your meter reading.',
+              ? 'Your meter reminder is ready. Record your reading to keep your bill accurate.'
+              : 'Time to check your meter reading and record units.',
+          scheduled,
+          details,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          androidScheduleMode: AndroidScheduleMode.alarmClock,
+          matchDateTimeComponents: settings.frequency == 'Weekly'
+              ? DateTimeComponents.dayOfWeekAndTime
+              : DateTimeComponents.time,
+          payload: 'meterpro_reminder',
+        );
+      } catch (alarmClockErr) {
+        debugPrint('alarmClock mode fallback: $alarmClockErr');
+        try {
+          await _localNotifications.zonedSchedule(
+            1,
+            'Check your meter reading ⚡',
+            settings.billReminders && settings.highUsageAlert
+                ? 'Your meter reminder is ready. Record your reading to keep your bill accurate.'
+                : 'Time to check your meter reading and record units.',
+            scheduled,
+            details,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            matchDateTimeComponents: settings.frequency == 'Weekly'
+                ? DateTimeComponents.dayOfWeekAndTime
+                : DateTimeComponents.time,
+            payload: 'meterpro_reminder',
+          );
+        } catch (exactErr) {
+          debugPrint('exactAllowWhileIdle fallback: $exactErr');
+          await _localNotifications.zonedSchedule(
+            1,
+            'Check your meter reading ⚡',
+            'Time to check your meter reading.',
+            scheduled,
+            details,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            matchDateTimeComponents: settings.frequency == 'Weekly'
+                ? DateTimeComponents.dayOfWeekAndTime
+                : DateTimeComponents.time,
+            payload: 'meterpro_reminder',
+          );
+        }
+      }
+
+      return scheduled;
+    } catch (e) {
+      debugPrint('Error scheduling notification: $e');
+      return DateTime.now();
+    }
+  }
+
+  /// Schedules a real background alarm to fire after [seconds] seconds.
+  /// Useful to immediately verify that background scheduled notifications work on this device.
+  Future<void> scheduleQuickTest({int seconds = 10}) async {
+    try {
+      if (!_initialized) await initialize();
+      await _ensureAndroidPermissions();
+
+      final scheduled = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
+
+      const androidDetails = AndroidNotificationDetails(
+        'meterpro_reminders',
+        'MeterPro Reminders',
+        channelDescription: 'Daily and weekly meter reading reminders.',
+        importance: Importance.max,
+        priority: Priority.max,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
+        category: AndroidNotificationCategory.alarm,
+      );
+
+      const details = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(),
+      );
+
+      try {
+        await _localNotifications.zonedSchedule(
+          999,
+          'Meter Reading Reminder ⚡',
+          'Scheduled alarm test succeeded! Time to check your meter.',
+          scheduled,
+          details,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          androidScheduleMode: AndroidScheduleMode.alarmClock,
+          payload: 'quick_test_reminder',
+        );
+      } catch (_) {
+        await _localNotifications.zonedSchedule(
+          999,
+          'Meter Reading Reminder ⚡',
+          'Scheduled alarm test succeeded! Time to check your meter.',
           scheduled,
           details,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          matchDateTimeComponents: settings.frequency == 'Weekly'
-              ? DateTimeComponents.dayOfWeekAndTime
-              : DateTimeComponents.time,
-          payload: 'meterpro_reminder',
-        );
-      } catch (exactErr) {
-        debugPrint('Exact alarm error, falling back: $exactErr');
-        await _localNotifications.zonedSchedule(
-          1,
-          'Check your meter reading',
-          settings.billReminders && settings.highUsageAlert
-              ? 'Your meter reminder is ready. Check reading and usage.'
-              : 'Time to check your meter reading.',
-          scheduled,
-          details,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          matchDateTimeComponents: settings.frequency == 'Weekly'
-              ? DateTimeComponents.dayOfWeekAndTime
-              : DateTimeComponents.time,
-          payload: 'meterpro_reminder',
+          payload: 'quick_test_reminder',
         );
       }
     } catch (e) {
-      debugPrint('Error scheduling notification: $e');
+      debugPrint('Error in scheduleQuickTest: $e');
     }
   }
 
