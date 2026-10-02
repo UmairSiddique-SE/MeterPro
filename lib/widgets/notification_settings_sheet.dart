@@ -305,11 +305,11 @@ class _NotificationSettingsSheetState extends State<NotificationSettingsSheet> {
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                           ),
                           onPressed: () async {
-                            await ReminderService.instance.scheduleQuickTestReminder();
+                            await ReminderService.instance.scheduleQuickTestReminder(seconds: 15);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Scheduled for 1 min from now! Lock phone & test.'),
+                                  content: Text('Scheduled for 15 sec from now! Lock phone & wait.'),
                                   backgroundColor: AppColors.accentOrange,
                                   duration: Duration(seconds: 3),
                                 ),
@@ -318,7 +318,7 @@ class _NotificationSettingsSheetState extends State<NotificationSettingsSheet> {
                           },
                           icon: const Icon(Icons.timer_outlined, size: 17),
                           label: const Text(
-                            'Test in 1 Min',
+                            'Test 15 Secs',
                             style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                           ),
                         ),

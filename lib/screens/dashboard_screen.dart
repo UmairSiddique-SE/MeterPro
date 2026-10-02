@@ -406,18 +406,6 @@ class _DashboardHomeState extends State<_DashboardHome> {
     }
   }
 
-  String _getGreetingEmoji(int hour) {
-    if (hour >= 5 && hour < 12) {
-      return '☀️';
-    } else if (hour >= 12 && hour < 17) {
-      return '🌤️';
-    } else if (hour >= 17 && hour < 21) {
-      return '🌇';
-    } else {
-      return '🌙';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -435,7 +423,6 @@ class _DashboardHomeState extends State<_DashboardHome> {
             .toUpperCase();
     final hour = _now.hour;
     final greeting = _getGreeting(hour);
-    final emoji = _getGreetingEmoji(hour);
 
     return StreamBuilder<List<MeterModel>>(
       stream: MeterRepository.instance.watchMeters(),
@@ -464,22 +451,13 @@ class _DashboardHomeState extends State<_DashboardHome> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    greeting,
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white70,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    emoji,
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                ],
+                              Text(
+                                greeting,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white70,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               Text(
                                 displayName,
